@@ -9,28 +9,23 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['favicon.ico', 'screen.png'],
       manifest: {
         name: 'ShadowPod',
         short_name: 'ShadowPod',
         description: 'English shadowing practice with auto-transcription',
-        theme_color: '#0F172A',
-        background_color: '#0F172A',
+        theme_color: '#0d150d',
+        background_color: '#0d150d',
         display: 'standalone',
         icons: [
           {
-            src: 'pwa-192x192.png',
-            sizes: '192x192',
+            src: 'screen.png',
+            sizes: '400x400',
             type: 'image/png'
           },
           {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
-            type: 'image/png'
-          },
-          {
-            src: 'pwa-512x512.png',
-            sizes: '512x512',
+            src: 'screen.png',
+            sizes: '400x400',
             type: 'image/png',
             purpose: 'any maskable'
           }

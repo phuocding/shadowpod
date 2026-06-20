@@ -17,10 +17,13 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [currentTab, setCurrentTab] = useState<'home' | 'favorites'>('home');
 
-  const filteredList = searchQuery
-    ? audioList.filter((a) => a.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : audioList;
+  const filteredList = audioList.filter((a) => {
+    const matchesSearch = !searchQuery || a.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesTab = currentTab === 'home' || a.isFavorite;
+    return matchesSearch && matchesTab;
+  });
 
   useEffect(() => {
     loadAudioList();
@@ -49,15 +52,20 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
 
   return (
     <div className="flex flex-col min-h-screen bg-[var(--color-background)]">
-      {/* Header - gradient fade */}
-      <header className="sticky top-0 z-50 flex justify-between items-center px-4 py-4 bg-gradient-to-b from-[var(--color-background)] to-transparent">
-        <h1 className="text-2xl font-bold text-[var(--color-text-base)] tracking-tight">ShadowPod</h1>
-        <button
-          onClick={() => navigate('/upload')}
-          className="bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-full w-10 h-10 flex items-center justify-center transition-transform active:scale-95"
-        >
-          <Icon name="add" />
-        </button>
+      {/* Header - Logo + Search */}
+      <header className="sticky top-0 z-50 flex justify-between items-center px-4 py-3 bg-gradient-to-b from-[var(--color-background)] to-transparent">
+        <div className="flex items-center gap-2">
+          <img src="/screen.png" alt="ShadowPod" className="w-8 h-8" />
+          <span className="text-xl font-bold text-[var(--color-text-base)] tracking-tight">ShadowPod</span>
+        </div>
+        {!showSearch && (
+          <button
+            onClick={() => setShowSearch(true)}
+            className="rounded-full w-10 h-10 flex items-center justify-center transition-all active:scale-95 bg-[var(--color-surface-container)] text-[var(--color-text-base)]"
+          >
+            <Icon name="search" />
+          </button>
+        )}
       </header>
 
       {/* Search Bar */}
@@ -71,8 +79,14 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search audio..."
               autoFocus
-              className="w-full pl-10 pr-4 py-2 bg-[var(--color-surface-dark)] border border-[var(--color-border-gray)] rounded-xl text-[var(--color-text-base)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)]"
+              className="w-full pl-10 pr-10 py-2 bg-[var(--color-surface-dark)] border border-[var(--color-border-gray)] rounded-xl text-[var(--color-text-base)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)]"
             />
+            <button
+              onClick={() => { setShowSearch(false); setSearchQuery(''); }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-base)]"
+            >
+              <Icon name="close" size={20} />
+            </button>
           </div>
         </div>
       )}
@@ -100,29 +114,43 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
         )}
       </main>
 
-      {/* Bottom Nav - Liquid Glass iOS 26 Style */}
+      {/* Bottom Nav - Threads Style */}
       <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-md z-50 bg-[var(--color-surface-container-low)]/80 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-        <div className="flex justify-around items-center h-16 px-4">
+        <div className="flex justify-around items-center h-16 px-2">
+          {/* Home */}
           <button
-            onClick={() => setShowSearch(false)}
-            className={`flex flex-col items-center justify-center ${!showSearch ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'} transition-colors`}
+            onClick={() => setCurrentTab('home')}
+            className={`flex flex-col items-center justify-center p-2 transition-colors ${currentTab === 'home' ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
           >
-            <Icon name="library_music" filled={!showSearch} size={24} />
-            <span className="text-xs mt-1">Library</span>
+            <Icon name="home" filled={currentTab === 'home'} size={24} />
           </button>
+          {/* Noti - disabled */}
           <button
-            onClick={() => setShowSearch(true)}
-            className={`flex flex-col items-center justify-center ${showSearch ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'} transition-colors`}
+            disabled
+            className="flex flex-col items-center justify-center p-2 text-[var(--color-text-muted)] opacity-40 cursor-not-allowed"
           >
-            <Icon name="search" filled={showSearch} size={24} />
-            <span className="text-xs mt-1">Search</span>
+            <Icon name="notifications" size={24} />
           </button>
+          {/* Add - center, bigger */}
+          <button
+            onClick={() => navigate('/upload')}
+            className="flex items-center justify-center w-12 h-12 -mt-4 bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-full shadow-lg transition-transform active:scale-95"
+          >
+            <Icon name="add" size={28} />
+          </button>
+          {/* Favorite */}
+          <button
+            onClick={() => setCurrentTab('favorites')}
+            className={`flex flex-col items-center justify-center p-2 transition-colors ${currentTab === 'favorites' ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
+          >
+            <Icon name="favorite" filled={currentTab === 'favorites'} size={24} />
+          </button>
+          {/* Settings */}
           <button
             onClick={onOpenSettings}
-            className="flex flex-col items-center justify-center text-[var(--color-text-muted)] transition-colors"
+            className="flex flex-col items-center justify-center p-2 text-[var(--color-text-muted)] transition-colors"
           >
             <Icon name="settings" size={24} />
-            <span className="text-xs mt-1">Settings</span>
           </button>
         </div>
       </nav>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { LibraryView } from './components/Library/LibraryView';
 import { UploadFlow } from './components/Upload/UploadFlow';
@@ -6,10 +6,24 @@ import { SettingsModal } from './components/Settings/SettingsModal';
 import { MiniPlayer } from './components/MiniPlayer';
 import { PlayerSheet } from './components/PlayerSheet';
 import { InstallPrompt } from './components/InstallPrompt';
+import { SplashScreen } from './components/SplashScreen';
 
 export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPlayerSheetOpen, setIsPlayerSheetOpen] = useState(false);
+  const [showSplash, setShowSplash] = useState(false);
+
+  useEffect(() => {
+    const hasSeenSplash = localStorage.getItem('hasSeenSplash');
+    if (!hasSeenSplash) {
+      setShowSplash(true);
+    }
+  }, []);
+
+  const handleSplashFinish = () => {
+    localStorage.setItem('hasSeenSplash', 'true');
+    setShowSplash(false);
+  };
 
   return (
     <BrowserRouter>
@@ -39,6 +53,8 @@ export default function App() {
       />
 
       <InstallPrompt />
+
+      {showSplash && <SplashScreen onFinish={handleSplashFinish} />}
     </BrowserRouter>
   );
 }
