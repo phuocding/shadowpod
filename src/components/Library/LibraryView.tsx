@@ -56,7 +56,7 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
       <header className="sticky top-0 z-50 flex justify-between items-center px-4 py-3 bg-gradient-to-b from-[var(--color-background)] to-transparent">
         <div className="flex items-center gap-2">
           <img src="/screen.png" alt="ShadowPod" className="w-8 h-8" />
-          <span className="text-xl font-bold text-[var(--color-text-base)] tracking-tight">ShadowPod</span>
+          <span className="text-xl font-bold text-[var(--color-primary)] tracking-tight">ShadowPod</span>
         </div>
         {!showSearch && (
           <button

@@ -54,6 +54,47 @@
   --spacing-margin-desktop: 24px;
 }
 
+/* Light Mode - Neon Tokyo */
+.light {
+  --color-primary: #ff2d78;
+  --color-primary-container: #ff2d78;
+  --color-primary-fixed: #ff5c99;
+  --color-primary-fixed-dim: #ff2d78;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #ffffff;
+
+  --color-secondary: #00ffcc;
+
+  --color-background: #f8f9fa;
+  --color-surface: #f8f9fa;
+  --color-surface-dark: #ffffff;
+  --color-surface-mid: #ffffff;
+  --color-surface-card: #ffffff;
+  --color-surface-container: #ffffff;
+  --color-surface-container-low: #f1f3f5;
+  --color-surface-container-high: #e9ecef;
+  --color-surface-container-highest: #dee2e6;
+  --color-surface-container-lowest: #ffffff;
+
+  --color-text-base: #0a0a12;
+  --color-text-muted: #6b7280;
+  --color-text-silver: #8e8e93;
+  --color-on-surface: #1a1a2e;
+  --color-on-surface-variant: #5a5068;
+
+  --color-border-gray: #e0e0e0;
+  --color-border-light: #d1d5db;
+  --color-outline: #e0e0e0;
+  --color-outline-variant: #ff2d7833;
+
+  --color-error: #dc2626;
+  --color-error-container: #fecaca;
+  --color-negative: #ff2d78;
+  --color-warning: #f59e0b;
+  --color-success: #10b981;
+  --color-announcement: #3b82f6;
+}
+
 * {
   box-sizing: border-box;
 }

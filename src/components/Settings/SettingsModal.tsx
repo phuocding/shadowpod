@@ -10,7 +10,7 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const { deepgramApiKey, setApiKey, clearApiKey } = useSettingsStore();
+  const { deepgramApiKey, setApiKey, clearApiKey, theme, toggleTheme } = useSettingsStore();
   const [inputKey, setInputKey] = useState(deepgramApiKey || '');
   const [showKey, setShowKey] = useState(false);
 
@@ -31,6 +31,27 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Settings">
       <div className="space-y-6">
+        {/* Theme Toggle */}
+        <div>
+          <label className="block text-sm font-semibold text-[var(--color-text-base)] mb-3">
+            Appearance
+          </label>
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center justify-between p-4 bg-[var(--color-surface-container-low)] border border-[var(--color-border-gray)] rounded-xl transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Icon name={theme === 'dark' ? 'dark_mode' : 'light_mode'} size={24} className="text-[var(--color-primary)]" />
+              <span className="text-[var(--color-text-base)]">
+                {theme === 'dark' ? 'Dark Mode' : 'Light Mode'}
+              </span>
+            </div>
+            <div className={`w-12 h-7 rounded-full p-1 transition-colors ${theme === 'light' ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border-gray)]'}`}>
+              <div className={`w-5 h-5 rounded-full bg-white transition-transform ${theme === 'light' ? 'translate-x-5' : 'translate-x-0'}`} />
+            </div>
+          </button>
+        </div>
+
         {/* API Key Section */}
         <div>
           <label className="block text-sm font-semibold text-[var(--color-text-base)] mb-2">
