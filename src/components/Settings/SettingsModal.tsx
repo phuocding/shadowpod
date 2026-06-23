@@ -110,6 +110,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             {hasKey ? 'Update' : 'Save'}
           </Button>
         </div>
+
+        {/* Version */}
+        <div className="pt-4 border-t border-[var(--color-border-gray)]">
+          <p className="text-xs text-[var(--color-text-muted)] text-center">
+            ShadowPod v1.0.1
+          </p>
+        </div>
       </div>
     </Modal>
   );
