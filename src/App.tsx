@@ -7,13 +7,16 @@ import { MiniPlayer } from './components/MiniPlayer';
 import { PlayerSheet } from './components/PlayerSheet';
 import { InstallPrompt } from './components/InstallPrompt';
 import { SplashScreen } from './components/SplashScreen';
+import { DictationView } from './components/Dictation';
 import { usePlayerStore } from './stores/playerStore';
 
 export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPlayerSheetOpen, setIsPlayerSheetOpen] = useState(false);
+  const [isDictationOpen, setIsDictationOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(false);
 
+  const currentAudio = usePlayerStore((s) => s.currentAudio);
   const pendingSheetOpen = usePlayerStore((s) => s.pendingSheetOpen);
   const setPendingSheetOpen = usePlayerStore((s) => s.setPendingSheetOpen);
 
@@ -37,6 +40,16 @@ export default function App() {
     setShowSplash(false);
   };
 
+  const handleOpenDictation = () => {
+    setIsPlayerSheetOpen(false);
+    setIsDictationOpen(true);
+  };
+
+  const handleCloseDictation = () => {
+    setIsDictationOpen(false);
+    setIsPlayerSheetOpen(true);
+  };
+
   return (
     <BrowserRouter>
       <Routes>
@@ -57,6 +70,7 @@ export default function App() {
       <PlayerSheet
         isOpen={isPlayerSheetOpen}
         onClose={() => setIsPlayerSheetOpen(false)}
+        onOpenDictation={handleOpenDictation}
       />
 
       <SettingsModal
@@ -65,6 +79,13 @@ export default function App() {
       />
 
       <InstallPrompt />
+
+      {isDictationOpen && currentAudio && (
+        <DictationView
+          audio={currentAudio}
+          onClose={handleCloseDictation}
+        />
+      )}
 
       {showSplash && <SplashScreen onFinish={handleSplashFinish} />}
     </BrowserRouter>

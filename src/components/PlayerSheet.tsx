@@ -5,6 +5,7 @@ import { TranscriptPanel } from './Player/TranscriptPanel';
 import { PlaybackControls } from './Player/PlaybackControls';
 import { LoopToggle } from './Player/LoopToggle';
 import { SpeedToggle } from './Player/SpeedToggle';
+import { ModeSwitcher } from './Player/ModeSwitcher';
 import { audioEngine } from '../services/audioEngine';
 import { toggleFavorite, mergeSegments, splitSegment, restoreOriginalTranscript } from '../services/storage';
 import { useSettingsStore } from '../stores/settingsStore';
@@ -14,14 +15,16 @@ import type { Segment, LoopMode, PlaybackSpeed } from '../types';
 interface PlayerSheetProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpenDictation?: () => void;
 }
 
-export function PlayerSheet({ isOpen, onClose }: PlayerSheetProps) {
+export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetProps) {
   const { loopMode, playbackSpeed, setLoopMode, setPlaybackSpeed } = useSettingsStore();
   const playerStore = usePlayerStore();
   const { currentAudio, isPlaying, currentTime, currentSegmentIndex } = playerStore;
   const { showToast, ToastComponent } = useToast();
 
+  const [practiceMode, setPracticeMode] = useState<'shadow' | 'dictate'>('shadow');
   const [localIsPlaying, setLocalIsPlaying] = useState(isPlaying);
   const [localCurrentTime, setLocalCurrentTime] = useState(currentTime);
   const [localSegmentIndex, setLocalSegmentIndex] = useState(currentSegmentIndex);
@@ -247,6 +250,20 @@ export function PlayerSheet({ isOpen, onClose }: PlayerSheetProps) {
     setIsFavorite(newValue);
   }, [currentAudio]);
 
+  const handleModeChange = useCallback((mode: 'shadow' | 'dictate') => {
+    setPracticeMode(mode);
+    if (mode === 'dictate' && onOpenDictation) {
+      // Pause audio when switching to dictation
+      if (localIsPlaying) {
+        audioEngine.pause();
+        playerStore.pause();
+        setLocalIsPlaying(false);
+      }
+      onOpenDictation();
+      setPracticeMode('shadow'); // Reset for next time
+    }
+  }, [onOpenDictation, localIsPlaying, playerStore]);
+
   // Edit Mode handlers
   const toggleEditMode = useCallback(() => {
     setIsEditMode(prev => {
@@ -369,6 +386,11 @@ export function PlayerSheet({ isOpen, onClose }: PlayerSheetProps) {
             <Icon name="content_copy" className="text-[var(--color-text-muted)]" />
           </button>
         </header>
+
+        {/* Mode Switcher */}
+        <div className="px-4 pt-2">
+          <ModeSwitcher mode={practiceMode} onModeChange={handleModeChange} />
+        </div>
 
         {/* Transcript */}
         <TranscriptPanel
