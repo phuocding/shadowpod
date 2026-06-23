@@ -7,6 +7,7 @@ import { PreviewPlayer } from './PreviewPlayer';
 import { transcribe } from '../../services/transcriber';
 import { saveAudio } from '../../services/storage';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { usePlayerStore } from '../../stores/playerStore';
 import { getErrorMessage } from '../../utils/errorMessages';
 import type { ErrorCode } from '../../types';
 
@@ -15,6 +16,8 @@ type Step = 'select' | 'preview' | 'transcribing' | 'error';
 export function UploadFlow() {
   const navigate = useNavigate();
   const apiKey = useSettingsStore((s) => s.deepgramApiKey);
+  const loadAndPlay = usePlayerStore((s) => s.loadAndPlay);
+  const setPendingSheetOpen = usePlayerStore((s) => s.setPendingSheetOpen);
 
   const [step, setStep] = useState<Step>('select');
   const [file, setFile] = useState<File | null>(null);
@@ -59,7 +62,10 @@ export function UploadFlow() {
       audio.duration
     );
 
-    navigate(`/play/${id}`);
+    // Load audio, signal sheet to open, and navigate home
+    await loadAndPlay(id);
+    setPendingSheetOpen(true);
+    navigate('/');
   }
 
   function reset() {

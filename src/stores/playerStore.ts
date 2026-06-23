@@ -10,8 +10,12 @@ interface PlayerStore {
   currentTime: number;
   currentSegmentIndex: number;
 
+  // UI state
+  pendingSheetOpen: boolean;
+
   // Actions
   loadAndPlay: (id: string) => Promise<void>;
+  setPendingSheetOpen: (value: boolean) => void;
   play: () => void;
   pause: () => void;
   toggle: () => void;
@@ -33,6 +37,9 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   isPlaying: false,
   currentTime: 0,
   currentSegmentIndex: 0,
+  pendingSheetOpen: false,
+
+  setPendingSheetOpen: (value: boolean) => set({ pendingSheetOpen: value }),
 
   loadAndPlay: async (id: string) => {
     const current = get().currentAudio;

@@ -7,11 +7,23 @@ import { MiniPlayer } from './components/MiniPlayer';
 import { PlayerSheet } from './components/PlayerSheet';
 import { InstallPrompt } from './components/InstallPrompt';
 import { SplashScreen } from './components/SplashScreen';
+import { usePlayerStore } from './stores/playerStore';
 
 export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPlayerSheetOpen, setIsPlayerSheetOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(false);
+
+  const pendingSheetOpen = usePlayerStore((s) => s.pendingSheetOpen);
+  const setPendingSheetOpen = usePlayerStore((s) => s.setPendingSheetOpen);
+
+  // Watch for pending sheet open (from UploadFlow after transcribe)
+  useEffect(() => {
+    if (pendingSheetOpen) {
+      setIsPlayerSheetOpen(true);
+      setPendingSheetOpen(false);
+    }
+  }, [pendingSheetOpen, setPendingSheetOpen]);
 
   useEffect(() => {
     const hasSeenSplash = localStorage.getItem('hasSeenSplash');
