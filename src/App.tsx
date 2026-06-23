@@ -26,14 +26,14 @@ export default function App() {
   }, [pendingSheetOpen, setPendingSheetOpen]);
 
   useEffect(() => {
-    const hasSeenSplash = localStorage.getItem('hasSeenSplash');
+    const hasSeenSplash = sessionStorage.getItem('hasSeenSplash');
     if (!hasSeenSplash) {
       setShowSplash(true);
     }
   }, []);
 
   const handleSplashFinish = () => {
-    localStorage.setItem('hasSeenSplash', 'true');
+    sessionStorage.setItem('hasSeenSplash', 'true');
     setShowSplash(false);
   };
 

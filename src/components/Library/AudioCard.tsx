@@ -11,9 +11,10 @@ interface AudioCardProps {
 }
 
 export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: AudioCardProps) {
-  const { loadAndPlay, currentAudio, isPlaying } = usePlayerStore();
+  const { loadAndPlay, toggle, currentAudio, isPlaying } = usePlayerStore();
 
-  const isCurrentlyPlaying = currentAudio?.id === audio.id && isPlaying;
+  const isThisAudio = currentAudio?.id === audio.id;
+  const isCurrentlyPlaying = isThisAudio && isPlaying;
 
   return (
     <div className="relative group">
@@ -43,7 +44,11 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
         <button
           onClick={(e) => {
             e.stopPropagation();
-            loadAndPlay(audio.id);
+            if (isThisAudio) {
+              toggle();
+            } else {
+              loadAndPlay(audio.id);
+            }
           }}
           className="ml-4 text-[var(--color-text-base)] hover:text-[var(--color-primary)] transition-colors"
         >
