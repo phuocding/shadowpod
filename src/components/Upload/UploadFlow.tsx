@@ -62,8 +62,8 @@ export function UploadFlow() {
       audio.duration
     );
 
-    // Load audio, signal sheet to open, and navigate home
-    await loadAndPlay(id);
+    // Load audio (no auto-play), signal sheet to open, and navigate home
+    await loadAndPlay(id, false);
     setPendingSheetOpen(true);
     navigate('/');
   }

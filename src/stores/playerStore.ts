@@ -14,7 +14,7 @@ interface PlayerStore {
   pendingSheetOpen: boolean;
 
   // Actions
-  loadAndPlay: (id: string) => Promise<void>;
+  loadAndPlay: (id: string, autoPlay?: boolean) => Promise<void>;
   setPendingSheetOpen: (value: boolean) => void;
   play: () => void;
   pause: () => void;
@@ -41,12 +41,12 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
   setPendingSheetOpen: (value: boolean) => set({ pendingSheetOpen: value }),
 
-  loadAndPlay: async (id: string) => {
+  loadAndPlay: async (id: string, autoPlay: boolean = true) => {
     const current = get().currentAudio;
 
     // If same audio: resume if paused, otherwise do nothing (let UI open sheet)
     if (current?.id === id) {
-      if (!get().isPlaying) {
+      if (!get().isPlaying && autoPlay) {
         get().play();
       }
       return;
@@ -80,8 +80,11 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     });
 
     set({ currentAudio: audio, currentTime: 0, currentSegmentIndex: 0 });
-    audioEngine.play();
-    set({ isPlaying: true });
+
+    if (autoPlay) {
+      audioEngine.play();
+      set({ isPlaying: true });
+    }
   },
 
   play: () => {
