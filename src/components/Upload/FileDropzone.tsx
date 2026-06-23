@@ -58,7 +58,7 @@ export function FileDropzone({ onFileSelect, onError }: FileDropzoneProps) {
         </p>
         <input
           type="file"
-          accept="audio/*"
+          accept=".mp3,.m4a,.wav,.webm,.ogg,audio/mpeg,audio/mp4,audio/wav,audio/webm,audio/ogg,audio/x-m4a"
           onChange={handleFileInput}
           className="hidden"
         />
