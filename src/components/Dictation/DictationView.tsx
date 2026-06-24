@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { DictationHeader } from './DictationHeader';
 import { DictationInput } from './DictationInput';
 import { DictationResult } from './DictationResult';
@@ -22,24 +22,45 @@ export function DictationView({ audio, onClose }: DictationViewProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
 
+  const checkEndIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const segments = audio.transcript || [];
   const currentSegment = segments[currentSegmentIndex];
   const totalSegments = segments.length;
   const isLastSegment = currentSegmentIndex === totalSegments - 1;
 
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (checkEndIntervalRef.current) {
+        clearInterval(checkEndIntervalRef.current);
+        checkEndIntervalRef.current = null;
+      }
+    };
+  }, []);
+
   const playSegment = useCallback(() => {
     if (!currentSegment) return;
+
+    // Clear any existing interval first
+    if (checkEndIntervalRef.current) {
+      clearInterval(checkEndIntervalRef.current);
+      checkEndIntervalRef.current = null;
+    }
 
     audioEngine.seek(currentSegment.startTime);
     audioEngine.play();
     setIsPlaying(true);
 
-    const checkEnd = setInterval(() => {
+    checkEndIntervalRef.current = setInterval(() => {
       const currentTime = audioEngine.getCurrentTime();
       if (currentTime >= currentSegment.endTime) {
         audioEngine.pause();
         setIsPlaying(false);
-        clearInterval(checkEnd);
+        if (checkEndIntervalRef.current) {
+          clearInterval(checkEndIntervalRef.current);
+          checkEndIntervalRef.current = null;
+        }
       }
     }, 100);
   }, [currentSegment]);
