@@ -8,6 +8,7 @@ import { AudioCard } from './AudioCard';
 import { EmptyState } from './EmptyState';
 import { FeaturedSection } from '../Featured';
 import { WelcomeScreen, UploadPrompt, UploadGuideModal } from '../Onboarding';
+import { SearchView } from '../SearchView';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { usePlayerStore } from '../../stores/playerStore';
 
@@ -20,8 +21,7 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
   const navigate = useNavigate();
   const [audioList, setAudioList] = useState<AudioRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
+  const [showSearchView, setShowSearchView] = useState(false);
   const [currentTab, setCurrentTab] = useState<'home' | 'favorites'>('home');
 
   // Onboarding state
@@ -40,9 +40,8 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
   const openSheet = usePlayerStore((s) => s.openSheet);
 
   const filteredList = audioList.filter((a) => {
-    const matchesSearch = !searchQuery || a.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTab = currentTab === 'home' || a.isFavorite;
-    return matchesSearch && matchesTab;
+    return matchesTab;
   });
 
   useEffect(() => {
@@ -110,38 +109,13 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
           <img src="/screen.png" alt="ShadowPod" className="w-8 h-8" />
           <span className="text-xl font-bold text-[var(--color-primary)] tracking-tight">ShadowPod</span>
         </div>
-        {!showSearch && (
-          <button
-            onClick={() => setShowSearch(true)}
-            className="rounded-full w-10 h-10 flex items-center justify-center transition-all active:scale-95 bg-[var(--color-surface-container)] text-[var(--color-text-base)]"
-          >
-            <Icon name="search" />
-          </button>
-        )}
+        <button
+          onClick={() => setShowSearchView(true)}
+          className="rounded-full w-10 h-10 flex items-center justify-center transition-all active:scale-95 bg-[var(--color-surface-container)] text-[var(--color-text-base)]"
+        >
+          <Icon name="search" />
+        </button>
       </header>
-
-      {/* Search Bar */}
-      {showSearch && (
-        <div className="px-4 py-2 bg-[var(--color-background)]">
-          <div className="relative">
-            <Icon name="search" size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search audio..."
-              autoFocus
-              className="w-full pl-10 pr-10 py-2 bg-[var(--color-surface-dark)] border border-[var(--color-border-gray)] rounded-xl text-[var(--color-text-base)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)]"
-            />
-            <button
-              onClick={() => { setShowSearch(false); setSearchQuery(''); }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-base)]"
-            >
-              <Icon name="close" size={20} />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Main Content */}
       <main className="flex-1 px-4 pt-2 pb-40 max-w-2xl mx-auto w-full">
@@ -242,6 +216,20 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
           </button>
         </div>
       </nav>
+
+      {/* Search View */}
+      <SearchView
+        isOpen={showSearchView}
+        onClose={() => setShowSearchView(false)}
+        userAudios={audioList}
+        onSelectUserAudio={(audio) => {
+          usePlayerStore.getState().loadAndPlay(audio.id);
+          onOpenPlayerSheet();
+        }}
+        onSelectFeaturedAudio={(audio) => {
+          handleSelectFeatured(audio);
+        }}
+      />
     </div>
   );
 }

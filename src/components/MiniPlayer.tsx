@@ -9,7 +9,7 @@ interface MiniPlayerProps {
 
 export function MiniPlayer({ onOpenSheet }: MiniPlayerProps) {
   const location = useLocation();
-  const { currentAudio, isPlaying, currentTime, toggle, prevTrack, nextTrack, toggleCurrentFavorite } = usePlayerStore();
+  const { currentAudio, isPlaying, currentTime, toggle, prevTrack, nextTrack, toggleCurrentFavorite, stop } = usePlayerStore();
 
   // Hide MiniPlayer on PlayerView route
   const isOnPlayerRoute = location.pathname.startsWith('/play/');
@@ -79,6 +79,13 @@ export function MiniPlayer({ onOpenSheet }: MiniPlayerProps) {
               className="p-2 text-[var(--color-text-base)] transition-colors"
             >
               <Icon name="skip_next" size={24} />
+            </button>
+            <button
+              onClick={stop}
+              className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-base)] transition-colors"
+              title="Close"
+            >
+              <Icon name="close" size={20} />
             </button>
           </div>
         </div>

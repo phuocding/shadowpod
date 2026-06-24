@@ -223,7 +223,8 @@ class AudioEngine {
   destroy(): void {
     if (this.audio) {
       this.audio.pause();
-      this.audio.src = '';
+      this.audio.removeAttribute('src');
+      this.audio.load(); // Reset the audio element
       this.audio = null;
     }
     this.onTimeUpdate = null;

@@ -120,7 +120,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         {/* Version */}
         <div className="pt-4 border-t border-[var(--color-border-gray)]">
           <p className="text-xs text-[var(--color-text-muted)] text-center">
-            ShadowPod v1.2.2
+            ShadowPod v1.2.4
           </p>
         </div>
       </div>
