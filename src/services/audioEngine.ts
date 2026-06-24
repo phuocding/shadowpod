@@ -89,6 +89,72 @@ class AudioEngine {
     });
   }
 
+  async loadFromUrl(url: string): Promise<number> {
+    // Increment loadId to cancel any in-progress load
+    const currentLoadId = ++this.loadId;
+
+    // Stop and cleanup existing audio first
+    if (this.audio) {
+      this.audio.pause();
+      this.audio.onloadedmetadata = null;
+      this.audio.onerror = null;
+      this.audio.ontimeupdate = null;
+      this.audio.onended = null;
+      this.audio.src = '';
+      this.audio = null;
+    }
+
+    // Revoke previous blob URL if exists
+    if (this.currentBlobUrl) {
+      URL.revokeObjectURL(this.currentBlobUrl);
+      this.currentBlobUrl = null;
+    }
+
+    this.audio = new Audio(url);
+
+    return new Promise((resolve, reject) => {
+      if (!this.audio) {
+        return reject(new Error('Audio not initialized'));
+      }
+
+      const audio = this.audio;
+
+      audio.onloadedmetadata = () => {
+        if (currentLoadId !== this.loadId) {
+          return;
+        }
+        resolve(audio.duration);
+      };
+
+      audio.onerror = (e) => {
+        if (currentLoadId !== this.loadId) {
+          return;
+        }
+        const mediaError = audio.error;
+        const errorMsg = mediaError
+          ? `Failed to load audio: ${mediaError.message} (code: ${mediaError.code})`
+          : 'Failed to load audio: unknown error';
+        console.error('AudioEngine error:', errorMsg, e);
+        reject(new Error(errorMsg));
+      };
+
+      audio.ontimeupdate = () => {
+        if (currentLoadId !== this.loadId) return;
+
+        if (this.loopEnd !== null && audio.currentTime >= this.loopEnd) {
+          audio.currentTime = this.loopStart ?? 0;
+        }
+
+        this.onTimeUpdate?.(audio.currentTime);
+      };
+
+      audio.onended = () => {
+        if (currentLoadId !== this.loadId) return;
+        this.onEnded?.();
+      };
+    });
+  }
+
   play(): void {
     if (this.audio) {
       // If audio has ended, seek to beginning first

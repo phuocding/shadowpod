@@ -9,6 +9,9 @@ export interface AudioRecord {
   createdAt: Date;
   lastPlayedAt?: Date;
   isFavorite?: boolean;
+  // Featured audio properties
+  isFeatured?: boolean;
+  audioUrl?: string;
 }
 
 // Transcript segment (sentence level)

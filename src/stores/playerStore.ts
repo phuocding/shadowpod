@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import type { AudioRecord, Segment } from '../types';
+import type { FeaturedAudio } from '../types/featured';
 import { audioEngine } from '../services/audioEngine';
 import { getAudio, getAllAudio, toggleFavorite } from '../services/storage';
+import { useOnboardingStore } from './onboardingStore';
 
 interface PlayerStore {
   // Current audio
@@ -12,10 +14,14 @@ interface PlayerStore {
 
   // UI state
   pendingSheetOpen: boolean;
+  isSheetOpen: boolean;
 
   // Actions
   loadAndPlay: (id: string, autoPlay?: boolean) => Promise<void>;
+  loadFeaturedAudio: (audio: FeaturedAudio) => Promise<void>;
   setPendingSheetOpen: (value: boolean) => void;
+  openSheet: () => void;
+  closeSheet: () => void;
   play: () => void;
   pause: () => void;
   toggle: () => void;
@@ -38,8 +44,65 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   currentTime: 0,
   currentSegmentIndex: 0,
   pendingSheetOpen: false,
+  isSheetOpen: false,
 
   setPendingSheetOpen: (value: boolean) => set({ pendingSheetOpen: value }),
+  openSheet: () => set({ isSheetOpen: true }),
+  closeSheet: () => set({ isSheetOpen: false }),
+
+  loadFeaturedAudio: async (audio: FeaturedAudio) => {
+    const current = get().currentAudio;
+
+    // If same audio: just open sheet
+    if (current?.id === audio.id) {
+      if (!get().isPlaying) {
+        get().play();
+      }
+      return;
+    }
+
+    // Convert FeaturedAudio to AudioRecord-like structure
+    const audioRecord: AudioRecord = {
+      id: audio.id,
+      name: audio.title,
+      blob: null as unknown as Blob, // Featured audio uses URL, not blob
+      transcript: audio.transcript,
+      duration: audio.duration,
+      createdAt: new Date(),
+      isFavorite: false,
+      isFeatured: true,
+      audioUrl: audio.audioUrl,
+    };
+
+    // Load from URL
+    await audioEngine.loadFromUrl(audio.audioUrl);
+
+    // Setup time update listener
+    audioEngine.setOnTimeUpdate((time) => {
+      set({ currentTime: time });
+
+      const { currentAudio } = get();
+      if (currentAudio?.transcript) {
+        const index = currentAudio.transcript.findIndex(
+          (seg) => time >= seg.startTime && time < seg.endTime
+        );
+        if (index !== -1) {
+          set({ currentSegmentIndex: index });
+        }
+      }
+    });
+
+    audioEngine.setOnEnded(() => {
+      set({ isPlaying: false });
+      // Increment sample sessions for onboarding
+      useOnboardingStore.getState().incrementSampleSessions();
+    });
+
+    set({ currentAudio: audioRecord, currentTime: 0, currentSegmentIndex: 0 });
+
+    audioEngine.play();
+    set({ isPlaying: true });
+  },
 
   loadAndPlay: async (id: string, autoPlay: boolean = true) => {
     const current = get().currentAudio;

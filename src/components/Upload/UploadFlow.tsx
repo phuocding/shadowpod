@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../ui/Icon';
 import { Button } from '../ui/Button';
 import { FileDropzone } from './FileDropzone';
 import { PreviewPlayer } from './PreviewPlayer';
+import { ApiKeySetupSheet } from '../Onboarding';
 import { transcribe } from '../../services/transcriber';
 import { saveAudio } from '../../services/storage';
 import { useSettingsStore } from '../../stores/settingsStore';
@@ -22,6 +23,14 @@ export function UploadFlow() {
   const [step, setStep] = useState<Step>('select');
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<ErrorCode | null>(null);
+  const [showApiKeySetup, setShowApiKeySetup] = useState(false);
+
+  // Auto-show API key setup when no key configured
+  useEffect(() => {
+    if (!apiKey) {
+      setShowApiKeySetup(true);
+    }
+  }, [apiKey]);
 
   function handleFileSelect(selectedFile: File) {
     setFile(selectedFile);
@@ -88,14 +97,6 @@ export function UploadFlow() {
 
       {/* Content */}
       <main className="flex-1 px-4 py-6 max-w-2xl mx-auto w-full">
-        {!apiKey && (
-          <div className="mb-6 p-4 bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/30 rounded-xl">
-            <p className="text-sm text-[var(--color-warning)]">
-              Vui lòng cấu hình Deepgram API key trong Settings trước khi transcribe.
-            </p>
-          </div>
-        )}
-
         {step === 'select' && (
           <FileDropzone onFileSelect={handleFileSelect} onError={handleError} />
         )}
@@ -123,6 +124,13 @@ export function UploadFlow() {
           <ErrorState message={getErrorMessage(error)} onRetry={reset} />
         )}
       </main>
+
+      {/* API Key Setup Sheet */}
+      <ApiKeySetupSheet
+        isOpen={showApiKeySetup}
+        onClose={() => navigate('/')}
+        onSuccess={() => setShowApiKeySetup(false)}
+      />
     </div>
   );
 }

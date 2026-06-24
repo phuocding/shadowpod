@@ -2,9 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllAudio, deleteAudio, toggleFavorite } from '../../services/storage';
 import type { AudioRecord } from '../../types';
+import type { FeaturedAudio } from '../../types/featured';
 import { Icon } from '../ui/Icon';
 import { AudioCard } from './AudioCard';
 import { EmptyState } from './EmptyState';
+import { FeaturedSection } from '../Featured';
+import { WelcomeScreen, UploadPrompt, UploadGuideModal } from '../Onboarding';
+import { useOnboardingStore } from '../../stores/onboardingStore';
+import { usePlayerStore } from '../../stores/playerStore';
 
 interface LibraryViewProps {
   onOpenSettings: () => void;
@@ -18,6 +23,21 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [currentTab, setCurrentTab] = useState<'home' | 'favorites'>('home');
+
+  // Onboarding state
+  const {
+    hasSeenWelcome,
+    sampleSessionsCompleted,
+    hasSeenUploadPrompt,
+    setWelcomeSeen,
+    setUploadPromptSeen,
+  } = useOnboardingStore();
+  const [showUploadPrompt, setShowUploadPrompt] = useState(false);
+  const [showUploadGuide, setShowUploadGuide] = useState(false);
+
+  // Player store for featured audio
+  const loadFeaturedAudio = usePlayerStore((s) => s.loadFeaturedAudio);
+  const openSheet = usePlayerStore((s) => s.openSheet);
 
   const filteredList = audioList.filter((a) => {
     const matchesSearch = !searchQuery || a.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -47,6 +67,38 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
     const newValue = await toggleFavorite(id);
     setAudioList((prev) =>
       prev.map((a) => (a.id === id ? { ...a, isFavorite: newValue } : a))
+    );
+  }
+
+  // Handle featured audio selection
+  function handleSelectFeatured(audio: FeaturedAudio) {
+    loadFeaturedAudio(audio);
+    openSheet();
+  }
+
+  // Show upload prompt after 2 sample sessions
+  useEffect(() => {
+    if (
+      sampleSessionsCompleted >= 2 &&
+      !hasSeenUploadPrompt &&
+      audioList.length === 0
+    ) {
+      const timer = setTimeout(() => setShowUploadPrompt(true), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [sampleSessionsCompleted, hasSeenUploadPrompt, audioList.length]);
+
+  // Welcome screen for first-time users
+  if (!hasSeenWelcome && audioList.length === 0 && !isLoading) {
+    return (
+      <WelcomeScreen
+        onTrySample={() => setWelcomeSeen()}
+        onUploadOwn={() => {
+          setWelcomeSeen();
+          navigate('/upload');
+        }}
+        onSkip={() => setWelcomeSeen()}
+      />
     );
   }
 
@@ -93,6 +145,18 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
 
       {/* Main Content */}
       <main className="flex-1 px-4 pt-2 pb-40 max-w-2xl mx-auto w-full">
+        {/* Featured Section - Always visible on Home tab */}
+        {currentTab === 'home' && (
+          <FeaturedSection onSelectAudio={handleSelectFeatured} />
+        )}
+
+        {/* Your Library Section */}
+        {currentTab === 'home' && audioList.length > 0 && (
+          <h2 className="text-lg font-bold text-[var(--color-text-base)] mb-3">
+            Your Library
+          </h2>
+        )}
+
         {isLoading ? (
           <LoadingSkeleton />
         ) : audioList.length === 0 ? (
@@ -113,6 +177,30 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
           </div>
         )}
       </main>
+
+      {/* Upload Prompt - After 2 sample sessions */}
+      {showUploadPrompt && (
+        <UploadPrompt
+          onShowGuide={() => {
+            setShowUploadPrompt(false);
+            setShowUploadGuide(true);
+          }}
+          onDismiss={() => {
+            setShowUploadPrompt(false);
+            setUploadPromptSeen();
+          }}
+        />
+      )}
+
+      {/* Upload Guide Modal */}
+      <UploadGuideModal
+        isOpen={showUploadGuide}
+        onClose={() => setShowUploadGuide(false)}
+        onUploadNow={() => {
+          setShowUploadGuide(false);
+          navigate('/upload');
+        }}
+      />
 
       {/* Bottom Nav - Threads Style */}
       <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-md z-50 bg-[var(--color-surface-container-low)]/80 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
