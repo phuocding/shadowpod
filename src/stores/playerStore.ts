@@ -32,6 +32,7 @@ interface PlayerStore {
   nextTrack: () => Promise<void>;
   setCurrentTime: (time: number) => void;
   setCurrentSegmentIndex: (index: number) => void;
+  updateCurrentTranscript: (transcript: Segment[]) => void;
   toggleCurrentFavorite: () => Promise<void>;
   restoreState: (audio: AudioRecord, isPlaying: boolean, currentTime: number, currentSegmentIndex: number) => void;
   clearState: () => void;
@@ -218,6 +219,13 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
   setCurrentTime: (time: number) => set({ currentTime: time }),
   setCurrentSegmentIndex: (index: number) => set({ currentSegmentIndex: index }),
+
+  updateCurrentTranscript: (transcript: Segment[]) => {
+    const { currentAudio } = get();
+    if (currentAudio) {
+      set({ currentAudio: { ...currentAudio, transcript } });
+    }
+  },
 
   toggleCurrentFavorite: async () => {
     const { currentAudio } = get();

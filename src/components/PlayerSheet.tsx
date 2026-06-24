@@ -307,10 +307,11 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
     const newTranscript = await mergeSegments(currentAudio.id, selectedSegments);
     if (newTranscript) {
       setLocalTranscript(newTranscript);
+      playerStore.updateCurrentTranscript(newTranscript);
       setSelectedSegments([]);
       showToast('Segments merged', 'success');
     }
-  }, [currentAudio, selectedSegments, showToast]);
+  }, [currentAudio, selectedSegments, showToast, playerStore]);
 
   const handleSplitOpen = useCallback((segment: Segment) => {
     setSplitModalSegment(segment);
@@ -321,22 +322,24 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
     const newTranscript = await splitSegment(currentAudio.id, splitModalSegment.id, wordIndex);
     if (newTranscript) {
       setLocalTranscript(newTranscript);
+      playerStore.updateCurrentTranscript(newTranscript);
       setSplitModalSegment(null);
       showToast('Segment split', 'success');
     }
-  }, [currentAudio, splitModalSegment, showToast]);
+  }, [currentAudio, splitModalSegment, showToast, playerStore]);
 
   const handleRestore = useCallback(async () => {
     if (!currentAudio) return;
     const restored = await restoreOriginalTranscript(currentAudio.id);
     if (restored) {
       setLocalTranscript(restored);
+      playerStore.updateCurrentTranscript(restored);
       setSelectedSegments([]);
       showToast('Transcript restored', 'success');
     } else {
       showToast('No changes to restore', 'info');
     }
-  }, [currentAudio, showToast]);
+  }, [currentAudio, showToast, playerStore]);
 
   if (!isOpen && !isClosing) return null;
   if (!currentAudio) return null;
@@ -453,21 +456,26 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
         {splitModalSegment && (
           <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10">
             <div className="bg-[var(--color-surface-container)] rounded-2xl p-4 mx-4 max-w-md w-full max-h-[60vh] overflow-y-auto">
-              <h3 className="text-lg font-bold text-[var(--color-text-base)] mb-4">Split at word</h3>
-              <p className="text-sm text-[var(--color-text-muted)] mb-4">Tap between words to split</p>
-              <div className="flex flex-wrap gap-1 mb-4">
+              <h3 className="text-lg font-bold text-[var(--color-text-base)] mb-2">Split segment</h3>
+              <p className="text-sm text-[var(--color-text-muted)] mb-4">Tap a word to split before it</p>
+              <div className="flex flex-wrap gap-2 mb-4">
                 {splitModalSegment.words.map((word, idx) => (
-                  <span key={idx} className="flex items-center">
-                    {idx > 0 && (
-                      <button
-                        onClick={() => handleSplitConfirm(idx)}
-                        className="w-4 h-6 flex items-center justify-center text-[var(--color-primary)] hover:bg-[var(--color-primary)]/20 rounded"
-                      >
-                        |
-                      </button>
-                    )}
-                    <span className="text-[var(--color-text-base)]">{word.text}</span>
-                  </span>
+                  idx === 0 ? (
+                    <span
+                      key={idx}
+                      className="px-2 py-1.5 text-[var(--color-text-muted)] bg-[var(--color-surface-card)] rounded-lg"
+                    >
+                      {word.text}
+                    </span>
+                  ) : (
+                    <button
+                      key={idx}
+                      onClick={() => handleSplitConfirm(idx)}
+                      className="px-3 py-1.5 text-[var(--color-text-base)] bg-[var(--color-primary)]/20 hover:bg-[var(--color-primary)]/40 active:bg-[var(--color-primary)] active:text-[var(--color-on-primary)] rounded-lg transition-colors"
+                    >
+                      {word.text}
+                    </button>
+                  )
                 ))}
               </div>
               <button
