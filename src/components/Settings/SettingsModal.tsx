@@ -54,9 +54,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
         {/* API Key Section */}
         <div>
-          <label className="block text-sm font-semibold text-[var(--color-text-base)] mb-2">
-            Deepgram API Key
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-semibold text-[var(--color-text-base)]">
+              Deepgram API Key
+            </label>
+            <span className="text-xs px-2 py-0.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-full">
+              Free forever
+            </span>
+          </div>
 
           <div className="relative">
             <input
@@ -85,6 +90,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             >
               deepgram.com
             </a>
+            {' '}— includes 12,000 free minutes/year
           </p>
 
           {hasKey && (
@@ -114,7 +120,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         {/* Version */}
         <div className="pt-4 border-t border-[var(--color-border-gray)]">
           <p className="text-xs text-[var(--color-text-muted)] text-center">
-            ShadowPod v1.1.0
+            ShadowPod v1.1.1
           </p>
         </div>
       </div>

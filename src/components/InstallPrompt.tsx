@@ -84,7 +84,7 @@ export function InstallPrompt() {
             <div className="flex-1 min-w-0">
               <h3 className="font-bold text-[var(--color-text-base)]">Cài đặt ShadowPod</h3>
               <p className="text-sm text-[var(--color-text-muted)] mt-1">
-                Thêm vào màn hình chính để truy cập nhanh hơn
+                Miễn phí mãi mãi • Không cần đăng ký
               </p>
             </div>
             <button

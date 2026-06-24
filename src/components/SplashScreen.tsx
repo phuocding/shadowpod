@@ -71,9 +71,12 @@ export function SplashScreen({ onFinish }: SplashScreenProps) {
           </div>
 
           {/* Tagline */}
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center space-y-2">
             <p className="text-sm text-[var(--color-text-silver)] tracking-widest uppercase opacity-70">
               Listen. Learn. Master.
+            </p>
+            <p className="text-xs text-[var(--color-primary)] opacity-80">
+              Free forever • No subscriptions
             </p>
           </div>
         </div>

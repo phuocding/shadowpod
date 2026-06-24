@@ -11,8 +11,11 @@ export function EmptyState() {
       <h2 className="text-xl font-bold text-[var(--color-text-base)] mb-2">
         No audio yet
       </h2>
-      <p className="text-[var(--color-text-muted)] text-center mb-6">
+      <p className="text-[var(--color-text-muted)] text-center mb-4">
         Upload your first audio file to start practicing
+      </p>
+      <p className="text-xs text-[var(--color-primary)] mb-6">
+        Free forever • No subscriptions • No limits
       </p>
     </div>
   );

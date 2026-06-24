@@ -144,6 +144,9 @@ function TranscribingState() {
       </div>
       <p className="text-lg text-[var(--color-text-base)]">Transcribing...</p>
       <p className="text-sm text-[var(--color-text-muted)] mt-2">Quá trình này có thể mất vài giây</p>
+      <p className="text-xs text-[var(--color-primary)] mt-4 opacity-70">
+        Free • Using your Deepgram API key
+      </p>
     </div>
   );
 }
