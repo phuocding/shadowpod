@@ -88,12 +88,23 @@ export function DictationView({ audio, onClose }: DictationViewProps) {
     setStep('result');
   }, [userInput, currentSegment, currentSegmentIndex]);
 
-  const handleRetry = useCallback(() => {
-    setUserInput('');
-    setStep('input');
+  const stopPlayback = useCallback(() => {
+    if (checkEndIntervalRef.current) {
+      clearInterval(checkEndIntervalRef.current);
+      checkEndIntervalRef.current = null;
+    }
+    audioEngine.pause();
+    setIsPlaying(false);
   }, []);
 
+  const handleRetry = useCallback(() => {
+    stopPlayback();
+    setUserInput('');
+    setStep('input');
+  }, [stopPlayback]);
+
   const handleNext = useCallback(() => {
+    stopPlayback();
     if (isLastSegment) {
       setStep('summary');
     } else {
@@ -101,9 +112,10 @@ export function DictationView({ audio, onClose }: DictationViewProps) {
       setUserInput('');
       setStep('input');
     }
-  }, [isLastSegment]);
+  }, [isLastSegment, stopPlayback]);
 
   const handleRetryAll = useCallback(() => {
+    stopPlayback();
     setCurrentSegmentIndex(0);
     setUserInput('');
     setSegmentResults([]);
