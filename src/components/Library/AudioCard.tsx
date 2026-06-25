@@ -11,13 +11,15 @@ interface AudioCardProps {
   onOpenSheet: () => void;
 }
 
+const ACTION_WIDTH = 160; // Width for 2 buttons (80px each)
+
 export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: AudioCardProps) {
   const { loadAndPlay, toggle, currentAudio, isPlaying } = usePlayerStore();
-  const [swipeX, setSwipeX] = useState(0);
-  const [isSwiped, setIsSwiped] = useState(false);
+  const [offsetX, setOffsetX] = useState(0);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
-  const isHorizontalSwipe = useRef(false);
+  const startOffsetX = useRef(0);
+  const isHorizontalSwipe = useRef<boolean | null>(null);
 
   const isThisAudio = currentAudio?.id === audio.id;
   const isCurrentlyPlaying = isThisAudio && isPlaying;
@@ -25,7 +27,8 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
-    isHorizontalSwipe.current = false;
+    startOffsetX.current = offsetX; // Remember current position
+    isHorizontalSwipe.current = null;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -33,46 +36,38 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
     const deltaY = e.touches[0].clientY - touchStartY.current;
 
     // Determine swipe direction on first significant move
-    if (!isHorizontalSwipe.current && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
+    if (isHorizontalSwipe.current === null && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
       isHorizontalSwipe.current = Math.abs(deltaX) > Math.abs(deltaY);
     }
 
     if (isHorizontalSwipe.current) {
       e.preventDefault();
-      // Only allow swipe left (negative) to reveal actions, or swipe right to reset
-      if (isSwiped) {
-        // If already swiped, allow swipe right to reset
-        const clampedX = Math.max(-160, Math.min(0, deltaX));
-        setSwipeX(clampedX);
-      } else {
-        // Only allow swipe left
-        const clampedX = Math.max(-160, Math.min(0, deltaX));
-        setSwipeX(clampedX);
-      }
+      // Calculate new position from start position + delta
+      const newOffset = startOffsetX.current + deltaX;
+      // Clamp: can't go positive (right of origin), max left is -ACTION_WIDTH with rubber band
+      const clampedOffset = Math.min(0, Math.max(-ACTION_WIDTH - 30, newOffset));
+      setOffsetX(clampedOffset);
     }
   };
 
   const handleTouchEnd = () => {
-    const threshold = 50;
-    if (swipeX < -threshold) {
-      // Swiped left enough - show actions
-      setIsSwiped(true);
-      setSwipeX(-160); // Width for 2 buttons (80px each)
+    if (isHorizontalSwipe.current === null) return;
+
+    const threshold = -50;
+    if (offsetX < threshold) {
+      // Snap to reveal actions
+      setOffsetX(-ACTION_WIDTH);
     } else {
-      // Reset to default
-      setIsSwiped(false);
-      setSwipeX(0);
+      // Snap back to origin
+      setOffsetX(0);
     }
   };
 
-  const resetSwipe = () => {
-    setIsSwiped(false);
-    setSwipeX(0);
-  };
+  const resetSwipe = () => setOffsetX(0);
 
   const handlePin = () => {
     resetSwipe();
-    onToggleFavorite(audio.id); // Using favorite as pin for now
+    onToggleFavorite(audio.id);
   };
 
   const handleDelete = () => {
@@ -80,74 +75,56 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
     onDelete(audio.id);
   };
 
+  const isRevealed = offsetX <= -ACTION_WIDTH + 10;
+
   return (
     <div className="relative overflow-hidden rounded-lg">
       {/* Action buttons behind (right side) - Pin + Delete */}
       <div className="absolute inset-y-0 right-0 flex">
-        <button
-          onClick={handlePin}
-          className="w-20 bg-[#1ed760] flex items-center justify-center"
-        >
+        <button onClick={handlePin} className="w-20 bg-[#1ed760] flex items-center justify-center">
           <Icon name={audio.isFavorite ? "keep_off" : "keep"} size={28} className="text-white" />
         </button>
-        <button
-          onClick={handleDelete}
-          className="w-20 bg-red-500 flex items-center justify-center"
-        >
+        <button onClick={handleDelete} className="w-20 bg-red-500 flex items-center justify-center">
           <Icon name="delete" size={28} className="text-white" />
         </button>
       </div>
 
       {/* Slideable card content */}
       <div
-        className="relative bg-[var(--color-surface-container-low)] border border-white/5 transition-transform duration-200"
-        style={{ transform: `translateX(${isSwiped ? -160 : swipeX}px)` }}
+        className="relative bg-[var(--color-surface-container-low)] border border-white/5"
+        style={{
+          transform: `translateX(${offsetX}px)`,
+          transition: isHorizontalSwipe.current === null ? 'transform 0.2s ease-out' : 'none'
+        }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onClick={() => {
-          if (isSwiped) {
+          if (isRevealed) {
             resetSwipe();
-          } else if (swipeX === 0) {
+          } else if (offsetX === 0) {
             loadAndPlay(audio.id);
             onOpenSheet();
           }
         }}
       >
         <div className="flex items-center p-4 cursor-pointer">
-          {/* Waveform thumbnail */}
           <div className="w-16 h-16 bg-[var(--color-surface-container)] rounded-lg flex items-center justify-center mr-4">
             <Icon name="graphic_eq" size={28} className="text-[var(--color-primary)]" />
           </div>
-
-          {/* Metadata */}
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-[var(--color-text-base)] truncate">
-              {audio.name}
-            </h3>
+            <h3 className="font-bold text-[var(--color-text-base)] truncate">{audio.name}</h3>
             <p className="text-sm text-[var(--color-text-muted)] mt-1">
               {formatTime(audio.duration)} • {formatRelativeDate(audio.createdAt)}
             </p>
           </div>
-
-          {/* Pin indicator */}
-          {audio.isFavorite && (
-            <Icon name="keep" size={20} className="text-[#1ed760] mr-2" filled />
-          )}
-
-          {/* Play/Pause button */}
+          {audio.isFavorite && <Icon name="keep" size={20} className="text-[#1ed760] mr-2" filled />}
           <button
             onClick={(e) => {
               e.stopPropagation();
-              if (isSwiped) {
-                resetSwipe();
-                return;
-              }
-              if (isThisAudio) {
-                toggle();
-              } else {
-                loadAndPlay(audio.id);
-              }
+              if (isRevealed) { resetSwipe(); return; }
+              if (isThisAudio) toggle();
+              else loadAndPlay(audio.id);
             }}
             className="text-[var(--color-text-base)] hover:text-[var(--color-primary)] transition-colors"
           >
