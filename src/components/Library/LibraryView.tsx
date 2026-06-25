@@ -229,8 +229,6 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
         onSelectFeaturedAudio={(audio) => {
           handleSelectFeatured(audio);
         }}
-        onDeleteAudio={(audio) => handleDelete(audio.id)}
-        onToggleFavorite={(audio) => handleToggleFavorite(audio.id)}
       />
     </div>
   );

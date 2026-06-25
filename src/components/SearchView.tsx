@@ -11,8 +11,6 @@ interface SearchViewProps {
   userAudios: AudioRecord[];
   onSelectUserAudio: (audio: AudioRecord) => void;
   onSelectFeaturedAudio: (audio: FeaturedAudio) => void;
-  onDeleteAudio?: (audio: AudioRecord) => void;
-  onToggleFavorite?: (audio: AudioRecord) => void;
 }
 
 type SearchResult =
@@ -25,14 +23,9 @@ export function SearchView({
   userAudios,
   onSelectUserAudio,
   onSelectFeaturedAudio,
-  onDeleteAudio,
-  onToggleFavorite,
 }: SearchViewProps) {
   const [query, setQuery] = useState('');
-  const [swipedId, setSwipedId] = useState<string | null>(null);
-  const [swipeDirection, setSwipeDirection] = useState<'left' | 'right' | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const touchStartX = useRef(0);
   const featuredAudios = getFeaturedContent();
 
   // Auto-focus input when opened
@@ -73,37 +66,6 @@ export function SearchView({
 
     return matches;
   }, [query, featuredAudios, userAudios]);
-
-  // Swipe handlers
-  const handleTouchStart = (e: React.TouchEvent, audioId: string) => {
-    touchStartX.current = e.touches[0].clientX;
-    if (swipedId && swipedId !== audioId) {
-      setSwipedId(null);
-      setSwipeDirection(null);
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent, audioId: string) => {
-    const touchEndX = e.changedTouches[0].clientX;
-    const diff = touchEndX - touchStartX.current;
-    const threshold = 60;
-
-    if (diff < -threshold) {
-      setSwipedId(audioId);
-      setSwipeDirection('left');
-    } else if (diff > threshold) {
-      setSwipedId(audioId);
-      setSwipeDirection('right');
-    } else {
-      setSwipedId(null);
-      setSwipeDirection(null);
-    }
-  };
-
-  const resetSwipe = () => {
-    setSwipedId(null);
-    setSwipeDirection(null);
-  };
 
   if (!isOpen) return null;
 
@@ -275,69 +237,42 @@ export function SearchView({
                   </button>
                 </button>
               ) : (
-                // Swipeable User Card
-                <div
+                // Simple User Card (no swipe in search)
+                <button
                   key={`user-${result.audio.id}`}
-                  className="relative overflow-hidden rounded-lg"
+                  onClick={() => {
+                    onSelectUserAudio(result.audio);
+                    onClose();
+                  }}
+                  className="w-full bg-[#181818] rounded-lg p-4 flex items-center gap-4 hover:bg-[#282828] transition-colors text-left group"
                 >
-                  {/* Action buttons behind */}
-                  <div className="absolute inset-y-0 left-0 w-20 bg-[#1ed760] flex items-center justify-center">
-                    <Icon name={result.audio.isFavorite ? "heart_minus" : "favorite"} size={24} className="text-white" filled={result.audio.isFavorite} />
+                  {/* Icon with badge */}
+                  <div className="w-16 h-16 bg-[#282828] flex items-center justify-center shrink-0 rounded-md relative">
+                    <Icon name="graphic_eq" size={28} className="text-[#b3b3b3]" />
+                    <span className="absolute top-1 left-1 bg-white/10 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-sm">
+                      YOUR
+                    </span>
                   </div>
-                  <div className="absolute inset-y-0 right-0 w-20 bg-red-500 flex items-center justify-center">
-                    <Icon name="delete" size={24} className="text-white" />
-                  </div>
-
-                  {/* Slideable card content */}
-                  <div
-                    className={`relative bg-[#181818] p-4 flex items-center gap-4 transition-transform duration-200 ${
-                      swipedId === result.audio.id
-                        ? swipeDirection === 'left'
-                          ? '-translate-x-20'
-                          : 'translate-x-20'
-                        : ''
-                    }`}
-                    onTouchStart={(e) => handleTouchStart(e, result.audio.id)}
-                    onTouchEnd={(e) => handleTouchEnd(e, result.audio.id)}
-                    onClick={() => {
-                      if (swipedId === result.audio.id) {
-                        if (swipeDirection === 'left' && onDeleteAudio) {
-                          onDeleteAudio(result.audio);
-                          resetSwipe();
-                        } else if (swipeDirection === 'right' && onToggleFavorite) {
-                          onToggleFavorite(result.audio);
-                          resetSwipe();
-                        }
-                      } else {
-                        onSelectUserAudio(result.audio);
-                        onClose();
-                      }
-                    }}
-                  >
-                    {/* Icon with badge */}
-                    <div className="w-16 h-16 bg-[#282828] flex items-center justify-center shrink-0 rounded-md relative">
-                      <Icon name="graphic_eq" size={28} className="text-[#b3b3b3]" />
-                      <span className="absolute top-1 left-1 bg-white/10 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-sm">
-                        YOUR
-                      </span>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-white font-bold text-[16px] truncate">
+                      {result.audio.name}
+                    </h3>
+                    <div className="flex items-center gap-2 text-[#b3b3b3] text-[14px]">
+                      <span>{formatTime(result.audio.duration)}</span>
+                      <span>•</span>
+                      <span>{new Date(result.audio.createdAt).toLocaleDateString()}</span>
                     </div>
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-bold text-[16px] truncate">
-                        {result.audio.name}
-                      </h3>
-                      <div className="flex items-center gap-2 text-[#b3b3b3] text-[14px]">
-                        <span>{formatTime(result.audio.duration)}</span>
-                        <span>•</span>
-                        <span>{new Date(result.audio.createdAt).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                    {/* Favorite indicator */}
-                    {result.audio.isFavorite && (
-                      <Icon name="favorite" size={20} className="text-[#1ed760] shrink-0" filled />
-                    )}
                   </div>
-                </div>
+                  {/* Favorite indicator */}
+                  {result.audio.isFavorite && (
+                    <Icon name="favorite" size={20} className="text-[#1ed760] shrink-0" filled />
+                  )}
+                  {/* Play button */}
+                  <button className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Icon name="play_arrow" size={24} className="text-black" filled />
+                  </button>
+                </button>
               )
             ))}
           </div>
