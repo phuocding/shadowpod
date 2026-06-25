@@ -11,7 +11,8 @@ interface AudioCardProps {
   onOpenSheet: () => void;
 }
 
-const ACTION_WIDTH = 160; // Width for 2 buttons (80px each)
+const LEFT_ACTION_WIDTH = 80;   // Favorite button width
+const RIGHT_ACTION_WIDTH = 160; // Pin + Delete buttons width
 
 export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: AudioCardProps) {
   const { loadAndPlay, toggle, currentAudio, isPlaying } = usePlayerStore();
@@ -27,7 +28,7 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
-    startOffsetX.current = offsetX; // Remember current position
+    startOffsetX.current = offsetX;
     isHorizontalSwipe.current = null;
   };
 
@@ -35,17 +36,15 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
     const deltaX = e.touches[0].clientX - touchStartX.current;
     const deltaY = e.touches[0].clientY - touchStartY.current;
 
-    // Determine swipe direction on first significant move
     if (isHorizontalSwipe.current === null && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
       isHorizontalSwipe.current = Math.abs(deltaX) > Math.abs(deltaY);
     }
 
     if (isHorizontalSwipe.current) {
       e.preventDefault();
-      // Calculate new position from start position + delta
       const newOffset = startOffsetX.current + deltaX;
-      // Clamp: can't go positive (right of origin), max left is -ACTION_WIDTH with rubber band
-      const clampedOffset = Math.min(0, Math.max(-ACTION_WIDTH - 30, newOffset));
+      // Clamp: max right is LEFT_ACTION_WIDTH, max left is -RIGHT_ACTION_WIDTH (with rubber band)
+      const clampedOffset = Math.max(-RIGHT_ACTION_WIDTH - 30, Math.min(LEFT_ACTION_WIDTH + 30, newOffset));
       setOffsetX(clampedOffset);
     }
   };
@@ -53,10 +52,13 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
   const handleTouchEnd = () => {
     if (isHorizontalSwipe.current === null) return;
 
-    const threshold = -50;
-    if (offsetX < threshold) {
-      // Snap to reveal actions
-      setOffsetX(-ACTION_WIDTH);
+    const threshold = 40;
+    if (offsetX < -threshold) {
+      // Snap to reveal right actions (Pin + Delete)
+      setOffsetX(-RIGHT_ACTION_WIDTH);
+    } else if (offsetX > threshold) {
+      // Snap to reveal left action (Favorite)
+      setOffsetX(LEFT_ACTION_WIDTH);
     } else {
       // Snap back to origin
       setOffsetX(0);
@@ -64,6 +66,11 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
   };
 
   const resetSwipe = () => setOffsetX(0);
+
+  const handleFavorite = () => {
+    resetSwipe();
+    onToggleFavorite(audio.id);
+  };
 
   const handlePin = () => {
     resetSwipe();
@@ -75,13 +82,20 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
     onDelete(audio.id);
   };
 
-  const isRevealed = offsetX <= -ACTION_WIDTH + 10;
+  const isRevealed = Math.abs(offsetX) > 30;
 
   return (
     <div className="relative overflow-hidden rounded-lg">
-      {/* Action buttons behind (right side) - Pin + Delete */}
+      {/* Left action - Favorite */}
+      <div className="absolute inset-y-0 left-0 w-20 bg-[#1ed760] flex items-center justify-center">
+        <button onClick={handleFavorite} className="w-full h-full flex items-center justify-center">
+          <Icon name={audio.isFavorite ? "heart_minus" : "favorite"} size={28} className="text-white" filled />
+        </button>
+      </div>
+
+      {/* Right actions - Pin + Delete */}
       <div className="absolute inset-y-0 right-0 flex">
-        <button onClick={handlePin} className="w-20 bg-[#1ed760] flex items-center justify-center">
+        <button onClick={handlePin} className="w-20 bg-amber-500 flex items-center justify-center">
           <Icon name={audio.isFavorite ? "keep_off" : "keep"} size={28} className="text-white" />
         </button>
         <button onClick={handleDelete} className="w-20 bg-red-500 flex items-center justify-center">
@@ -100,12 +114,8 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onClick={() => {
-          if (isRevealed) {
-            resetSwipe();
-          } else if (offsetX === 0) {
-            loadAndPlay(audio.id);
-            onOpenSheet();
-          }
+          if (isRevealed) resetSwipe();
+          else if (offsetX === 0) { loadAndPlay(audio.id); onOpenSheet(); }
         }}
       >
         <div className="flex items-center p-4 cursor-pointer">
@@ -118,7 +128,7 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
               {formatTime(audio.duration)} • {formatRelativeDate(audio.createdAt)}
             </p>
           </div>
-          {audio.isFavorite && <Icon name="keep" size={20} className="text-[#1ed760] mr-2" filled />}
+          {audio.isFavorite && <Icon name="favorite" size={20} className="text-[#1ed760] mr-2" filled />}
           <button
             onClick={(e) => {
               e.stopPropagation();
