@@ -14,7 +14,7 @@ interface AudioCardProps {
 export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: AudioCardProps) {
   const { loadAndPlay, toggle, currentAudio, isPlaying } = usePlayerStore();
   const [swipeX, setSwipeX] = useState(0);
-  const [isSwiped, setIsSwiped] = useState<'left' | 'right' | null>(null);
+  const [isSwiped, setIsSwiped] = useState(false);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const isHorizontalSwipe = useRef(false);
@@ -39,29 +39,40 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
 
     if (isHorizontalSwipe.current) {
       e.preventDefault();
-      // Limit swipe range
-      const clampedX = Math.max(-80, Math.min(80, deltaX));
-      setSwipeX(clampedX);
+      // Only allow swipe left (negative) to reveal actions, or swipe right to reset
+      if (isSwiped) {
+        // If already swiped, allow swipe right to reset
+        const clampedX = Math.max(-160, Math.min(0, deltaX));
+        setSwipeX(clampedX);
+      } else {
+        // Only allow swipe left
+        const clampedX = Math.max(-160, Math.min(0, deltaX));
+        setSwipeX(clampedX);
+      }
     }
   };
 
   const handleTouchEnd = () => {
     const threshold = 50;
     if (swipeX < -threshold) {
-      setIsSwiped('left');
-      setSwipeX(-80);
-    } else if (swipeX > threshold) {
-      setIsSwiped('right');
-      setSwipeX(80);
+      // Swiped left enough - show actions
+      setIsSwiped(true);
+      setSwipeX(-160); // Width for 2 buttons (80px each)
     } else {
-      setIsSwiped(null);
+      // Reset to default
+      setIsSwiped(false);
       setSwipeX(0);
     }
   };
 
   const resetSwipe = () => {
-    setIsSwiped(null);
+    setIsSwiped(false);
     setSwipeX(0);
+  };
+
+  const handlePin = () => {
+    resetSwipe();
+    onToggleFavorite(audio.id); // Using favorite as pin for now
   };
 
   const handleDelete = () => {
@@ -69,33 +80,34 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
     onDelete(audio.id);
   };
 
-  const handleFavorite = () => {
-    resetSwipe();
-    onToggleFavorite(audio.id);
-  };
-
   return (
     <div className="relative overflow-hidden rounded-lg">
-      {/* Action buttons behind */}
-      <div className="absolute inset-y-0 left-0 w-20 bg-[#1ed760] flex items-center justify-center">
-        <Icon name={audio.isFavorite ? "heart_minus" : "favorite"} size={28} className="text-white" filled />
-      </div>
-      <div className="absolute inset-y-0 right-0 w-20 bg-red-500 flex items-center justify-center">
-        <Icon name="delete" size={28} className="text-white" />
+      {/* Action buttons behind (right side) - Pin + Delete */}
+      <div className="absolute inset-y-0 right-0 flex">
+        <button
+          onClick={handlePin}
+          className="w-20 bg-[#1ed760] flex items-center justify-center"
+        >
+          <Icon name={audio.isFavorite ? "keep_off" : "keep"} size={28} className="text-white" />
+        </button>
+        <button
+          onClick={handleDelete}
+          className="w-20 bg-red-500 flex items-center justify-center"
+        >
+          <Icon name="delete" size={28} className="text-white" />
+        </button>
       </div>
 
       {/* Slideable card content */}
       <div
         className="relative bg-[var(--color-surface-container-low)] border border-white/5 transition-transform duration-200"
-        style={{ transform: `translateX(${isSwiped ? (isSwiped === 'left' ? -80 : 80) : swipeX}px)` }}
+        style={{ transform: `translateX(${isSwiped ? -160 : swipeX}px)` }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onClick={() => {
-          if (isSwiped === 'left') {
-            handleDelete();
-          } else if (isSwiped === 'right') {
-            handleFavorite();
+          if (isSwiped) {
+            resetSwipe();
           } else if (swipeX === 0) {
             loadAndPlay(audio.id);
             onOpenSheet();
@@ -118,9 +130,9 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
             </p>
           </div>
 
-          {/* Favorite indicator */}
+          {/* Pin indicator */}
           {audio.isFavorite && (
-            <Icon name="favorite" size={20} className="text-[#1ed760] mr-2" filled />
+            <Icon name="keep" size={20} className="text-[#1ed760] mr-2" filled />
           )}
 
           {/* Play/Pause button */}
