@@ -113,9 +113,12 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onClick={() => {
+        onClick={async () => {
           if (isRevealed) resetSwipe();
-          else if (offsetX === 0) { loadAndPlay(audio.id); onOpenSheet(); }
+          else if (offsetX === 0) {
+            await loadAndPlay(audio.id);
+            onOpenSheet();
+          }
         }}
       >
         <div className="flex items-center p-4 cursor-pointer">

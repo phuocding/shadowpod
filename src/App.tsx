@@ -6,6 +6,7 @@ import { SettingsModal } from './components/Settings/SettingsModal';
 import { MiniPlayer } from './components/MiniPlayer';
 import { PlayerSheet } from './components/PlayerSheet';
 import { InstallPrompt } from './components/InstallPrompt';
+import { UpdatePrompt } from './components/UpdatePrompt';
 import { SplashScreen } from './components/SplashScreen';
 import { DictationView } from './components/Dictation';
 import { usePlayerStore } from './stores/playerStore';
@@ -79,6 +80,7 @@ export default function App() {
       />
 
       <InstallPrompt />
+      <UpdatePrompt />
 
       {isDictationOpen && currentAudio && (
         <DictationView
