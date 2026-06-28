@@ -7,12 +7,17 @@ export function UpdatePrompt() {
     updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(_swUrl, registration) {
-      // Check for updates every 60 seconds when app is open
+      console.log('[PWA] SW registered:', _swUrl);
+      // Check for updates every 30 seconds when app is open
       if (registration) {
         setInterval(() => {
+          console.log('[PWA] Checking for updates...');
           registration.update();
-        }, 60 * 1000);
+        }, 30 * 1000);
       }
+    },
+    onNeedRefresh() {
+      console.log('[PWA] New version available!');
     },
   });
 
