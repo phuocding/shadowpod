@@ -232,6 +232,8 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     if (!currentAudio) return;
     const newValue = await toggleFavorite(currentAudio.id);
     set({ currentAudio: { ...currentAudio, isFavorite: newValue } });
+    // Notify LibraryView to refresh
+    window.dispatchEvent(new CustomEvent('favorite-changed', { detail: { id: currentAudio.id, isFavorite: newValue } }));
   },
 
   restoreState: (audio: AudioRecord, isPlaying: boolean, currentTime: number, currentSegmentIndex: number) => {

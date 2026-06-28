@@ -48,9 +48,10 @@ export async function transcribe(
 
 function parseDeepgramResponse(data: DeepgramResponse): Segment[] {
   const utterances = data.results?.utterances;
+  let segments: Segment[] = [];
 
   if (utterances && utterances.length > 0) {
-    return utterances.map((utterance, index) => ({
+    segments = utterances.map((utterance, index) => ({
       id: index,
       text: utterance.transcript,
       startTime: utterance.start,
@@ -62,53 +63,60 @@ function parseDeepgramResponse(data: DeepgramResponse): Segment[] {
         confidence: w.confidence,
       })),
     }));
-  }
+  } else {
+    // Fallback: parse from words if no utterances
+    const channel = data.results?.channels?.[0];
+    const alternative = channel?.alternatives?.[0];
 
-  // Fallback: parse from words if no utterances
-  const channel = data.results?.channels?.[0];
-  const alternative = channel?.alternatives?.[0];
+    if (!alternative?.words?.length) {
+      return [];
+    }
 
-  if (!alternative?.words?.length) {
-    return [];
-  }
+    // Group words into sentences by punctuation
+    let currentSegment: Segment | null = null;
 
-  // Group words into sentences by punctuation
-  const segments: Segment[] = [];
-  let currentSegment: Segment | null = null;
+    alternative.words.forEach((word, index) => {
+      const wordText = word.punctuated_word || word.word;
 
-  alternative.words.forEach((word, index) => {
-    const wordText = word.punctuated_word || word.word;
-
-    if (!currentSegment) {
-      currentSegment = {
-        id: segments.length,
-        text: wordText,
-        startTime: word.start,
-        endTime: word.end,
-        words: [{
+      if (!currentSegment) {
+        currentSegment = {
+          id: segments.length,
+          text: wordText,
+          startTime: word.start,
+          endTime: word.end,
+          words: [{
+            text: wordText,
+            startTime: word.start,
+            endTime: word.end,
+            confidence: word.confidence,
+          }],
+        };
+      } else {
+        currentSegment.text += ' ' + wordText;
+        currentSegment.endTime = word.end;
+        currentSegment.words.push({
           text: wordText,
           startTime: word.start,
           endTime: word.end,
           confidence: word.confidence,
-        }],
-      };
-    } else {
-      currentSegment.text += ' ' + wordText;
-      currentSegment.endTime = word.end;
-      currentSegment.words.push({
-        text: wordText,
-        startTime: word.start,
-        endTime: word.end,
-        confidence: word.confidence,
-      });
-    }
+        });
+      }
 
-    // End segment on sentence-ending punctuation
-    if (wordText.match(/[.!?]$/) || index === alternative.words.length - 1) {
-      segments.push(currentSegment);
-      currentSegment = null;
+      // End segment on sentence-ending punctuation
+      if (wordText.match(/[.!?]$/) || index === alternative.words.length - 1) {
+        segments.push(currentSegment);
+        currentSegment = null;
+      }
+    });
+  }
+
+  // Normalize first segment to start at 0
+  if (segments.length > 0 && segments[0].startTime > 0) {
+    segments[0].startTime = 0;
+    if (segments[0].words.length > 0) {
+      segments[0].words[0].startTime = 0;
     }
-  });
+  }
 
   return segments;
 }

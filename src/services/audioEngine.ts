@@ -11,6 +11,9 @@ class AudioEngine {
   private loopEnd: number | null = null;
   private currentBlobUrl: string | null = null;
   private loadId: number = 0;
+  private loopCheckInterval: number | null = null;
+  private static readonly LOOP_CHECK_INTERVAL_MS = 50;
+  private static readonly LOOP_BUFFER_MS = 0.15; // 150ms buffer for mobile compatibility
 
   async load(blob: Blob): Promise<number> {
     // Validate blob
@@ -73,12 +76,6 @@ class AudioEngine {
 
       audio.ontimeupdate = () => {
         if (currentLoadId !== this.loadId) return;
-
-        // Handle loop bounds
-        if (this.loopEnd !== null && audio.currentTime >= this.loopEnd) {
-          audio.currentTime = this.loopStart ?? 0;
-        }
-
         this.onTimeUpdate?.(audio.currentTime);
       };
 
@@ -140,11 +137,6 @@ class AudioEngine {
 
       audio.ontimeupdate = () => {
         if (currentLoadId !== this.loadId) return;
-
-        if (this.loopEnd !== null && audio.currentTime >= this.loopEnd) {
-          audio.currentTime = this.loopStart ?? 0;
-        }
-
         this.onTimeUpdate?.(audio.currentTime);
       };
 
@@ -185,18 +177,51 @@ class AudioEngine {
     this.loopStart = start;
     this.loopEnd = end;
 
-    if (this.audio && start === null && end === null) {
+    // Clear existing loop check interval
+    this.stopLoopCheck();
+
+    if (this.audio && start !== null && end !== null) {
+      // Start precise loop checking
+      this.startLoopCheck();
+    } else if (this.audio) {
       this.audio.loop = false;
     }
   }
 
   setLoopAll(enabled: boolean): void {
+    // Clear segment loop when enabling all loop
+    this.stopLoopCheck();
+    this.loopStart = null;
+    this.loopEnd = null;
+
     if (this.audio) {
       this.audio.loop = enabled;
-      if (enabled) {
-        this.loopStart = null;
-        this.loopEnd = null;
+    }
+  }
+
+  private startLoopCheck(): void {
+    this.loopCheckInterval = window.setInterval(() => {
+      if (!this.audio || this.loopEnd === null || this.loopStart === null) return;
+      if (this.audio.paused) return; // Skip if already paused
+
+      // Trigger loop slightly before end to account for seek delay
+      const triggerPoint = this.loopEnd - AudioEngine.LOOP_BUFFER_MS;
+      if (this.audio.currentTime >= triggerPoint) {
+        // Pause -> seek -> play for clean transition on mobile
+        const wasPlaying = !this.audio.paused;
+        this.audio.pause();
+        this.audio.currentTime = this.loopStart;
+        if (wasPlaying) {
+          this.audio.play();
+        }
       }
+    }, AudioEngine.LOOP_CHECK_INTERVAL_MS);
+  }
+
+  private stopLoopCheck(): void {
+    if (this.loopCheckInterval !== null) {
+      clearInterval(this.loopCheckInterval);
+      this.loopCheckInterval = null;
     }
   }
 
@@ -221,10 +246,11 @@ class AudioEngine {
   }
 
   destroy(): void {
+    this.stopLoopCheck();
     if (this.audio) {
       this.audio.pause();
       this.audio.removeAttribute('src');
-      this.audio.load(); // Reset the audio element
+      this.audio.load();
       this.audio = null;
     }
     this.onTimeUpdate = null;

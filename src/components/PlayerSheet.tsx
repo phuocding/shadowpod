@@ -107,12 +107,19 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
     setSelectedSegments([]);
     setSplitModalSegment(null);
 
+    // Reset playback settings to defaults
+    setLoopMode('none');
+    setPlaybackSpeed('default');
+    audioEngine.setLoop(null, null);
+    audioEngine.setLoopAll(false);
+    audioEngine.setSpeed('default');
+
     setIsClosing(true);
     setTimeout(() => {
       setIsClosing(false);
       onClose();
     }, 300);
-  }, [onClose]);
+  }, [onClose, setLoopMode, setPlaybackSpeed]);
 
   // Drag to dismiss handlers
   const handleDragStart = useCallback((clientY: number) => {
@@ -246,9 +253,9 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
 
   const handleToggleFavorite = useCallback(async () => {
     if (!currentAudio) return;
-    const newValue = await toggleFavorite(currentAudio.id);
-    setIsFavorite(newValue);
-  }, [currentAudio]);
+    await playerStore.toggleCurrentFavorite();
+    setIsFavorite(!isFavorite);
+  }, [currentAudio, isFavorite, playerStore]);
 
   const handleModeChange = useCallback((mode: 'shadow' | 'dictate') => {
     setPracticeMode(mode);

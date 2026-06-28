@@ -48,6 +48,17 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
     loadAudioList();
   }, []);
 
+  // Listen for favorite changes from PlayerSheet
+  useEffect(() => {
+    const handleFavoriteChanged = (e: CustomEvent<{ id: string; isFavorite: boolean }>) => {
+      setAudioList((prev) =>
+        prev.map((a) => (a.id === e.detail.id ? { ...a, isFavorite: e.detail.isFavorite } : a))
+      );
+    };
+    window.addEventListener('favorite-changed', handleFavoriteChanged as EventListener);
+    return () => window.removeEventListener('favorite-changed', handleFavoriteChanged as EventListener);
+  }, []);
+
   async function loadAudioList() {
     setIsLoading(true);
     const list = await getAllAudio();
