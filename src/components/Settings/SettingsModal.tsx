@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { getLatestRelease, type GitHubRelease } from '../../services/githubRelease';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -13,6 +14,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { deepgramApiKey, setApiKey, clearApiKey, theme, toggleTheme } = useSettingsStore();
   const [inputKey, setInputKey] = useState(deepgramApiKey || '');
   const [showKey, setShowKey] = useState(false);
+  const [release, setRelease] = useState<GitHubRelease | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      getLatestRelease().then(setRelease);
+    }
+  }, [isOpen]);
 
   function handleSave() {
     if (inputKey.trim()) {
@@ -120,7 +128,20 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
         {/* Version */}
         <div className="pt-4 border-t border-[var(--color-border-gray)]">
           <p className="text-xs text-[var(--color-text-muted)] text-center">
-            ShadowPod v1.2.8
+            ShadowPod v{release?.version || '...'}
+            {release?.url && (
+              <>
+                {' • '}
+                <a
+                  href={release.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--color-primary)] hover:underline"
+                >
+                  Release Notes
+                </a>
+              </>
+            )}
           </p>
         </div>
       </div>
