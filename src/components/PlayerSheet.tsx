@@ -7,7 +7,7 @@ import { LoopToggle } from './Player/LoopToggle';
 import { SpeedToggle } from './Player/SpeedToggle';
 import { ModeSwitcher } from './Player/ModeSwitcher';
 import { audioEngine } from '../services/audioEngine';
-import { toggleFavorite, mergeSegments, splitSegment, restoreOriginalTranscript } from '../services/storage';
+import { mergeSegments, splitSegment, restoreOriginalTranscript } from '../services/storage';
 import { useSettingsStore } from '../stores/settingsStore';
 import { usePlayerStore } from '../stores/playerStore';
 import type { Segment, LoopMode, PlaybackSpeed } from '../types';
