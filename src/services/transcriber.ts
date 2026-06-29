@@ -1,10 +1,12 @@
 import type { Segment, DeepgramResponse, ErrorCode } from '../types';
+import { transcribeWithAPI, type UserQuota } from './api';
 
 const DEEPGRAM_API_URL = 'https://api.deepgram.com/v1/listen';
 
 interface TranscribeResult {
   segments: Segment[];
   error?: ErrorCode;
+  quota?: UserQuota;
 }
 
 export async function transcribe(
@@ -119,4 +121,47 @@ function parseDeepgramResponse(data: DeepgramResponse): Segment[] {
   }
 
   return segments;
+}
+
+// Transcribe using server API (no key exposed to client)
+export async function transcribeWithServerAPI(
+  audioBlob: Blob
+): Promise<TranscribeResult> {
+  try {
+    // Convert blob to base64
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const base64 = btoa(
+      new Uint8Array(arrayBuffer).reduce(
+        (data, byte) => data + String.fromCharCode(byte),
+        ''
+      )
+    );
+
+    const response = await transcribeWithAPI(base64, audioBlob.type || 'audio/mpeg');
+
+    if (!response.success) {
+      return { segments: [], error: 'TRANSCRIBE_FAILED' };
+    }
+
+    const segments = parseDeepgramResponse(response.transcript);
+
+    return {
+      segments,
+      quota: response.usage?.quota
+    };
+  } catch (error: any) {
+    console.error('[Transcriber] Server API error:', error);
+
+    if (error.message?.includes('quota')) {
+      return { segments: [], error: 'QUOTA_EXCEEDED' };
+    }
+    if (error.message?.includes('auth') || error.message?.includes('401')) {
+      return { segments: [], error: 'INVALID_API_KEY' };
+    }
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      return { segments: [], error: 'NETWORK_ERROR' };
+    }
+
+    return { segments: [], error: 'TRANSCRIBE_FAILED' };
+  }
 }

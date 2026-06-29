@@ -13,10 +13,12 @@ interface SettingsModalProps {
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { deepgramApiKey, setApiKey, clearApiKey, theme, toggleTheme } = useSettingsStore();
-  const { isAuthenticated, user, quota, logout, refreshUser } = useAuthStore();
+  const { isAuthenticated, user, quota, logout, refreshUser, mockSubscription } = useAuthStore();
   const [inputKey, setInputKey] = useState(deepgramApiKey || '');
   const [showKey, setShowKey] = useState(false);
   const [release, setRelease] = useState<GitHubRelease | null>(null);
+
+  const isDev = window.location.hostname === 'localhost';
 
   useEffect(() => {
     if (isOpen) {
@@ -56,7 +58,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-[var(--color-text-base)]">{user.email}</p>
-                    <p className="text-xs text-[var(--color-text-muted)]">Subscribed</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {quota?.hasActiveSubscription ? 'Subscribed' : 'Free'}
+                    </p>
                   </div>
                 </div>
                 <button
@@ -66,12 +70,12 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   Sign out
                 </button>
               </div>
-              {quota && (
+              {quota?.hasActiveSubscription ? (
                 <div className="pt-3 border-t border-[var(--color-border-gray)]">
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="text-[var(--color-text-muted)]">Quota used</span>
+                    <span className="text-[var(--color-text-muted)]">Quota</span>
                     <span className="text-[var(--color-text-base)]">
-                      {quota.minutesUsed.toFixed(1)} / {quota.minutesQuota} min
+                      {quota.minutesUsed.toFixed(1)} / {quota.minutesQuota} phút
                     </span>
                   </div>
                   <div className="h-2 bg-[var(--color-surface-dark)] rounded-full overflow-hidden">
@@ -81,18 +85,39 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                     />
                   </div>
                   <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                    {quota.minutesRemaining.toFixed(1)} minutes remaining
+                    {quota.minutesRemaining.toFixed(1)} phút còn lại
+                    {quota.expiresAt && ` • Reset ${new Date(quota.expiresAt).toLocaleDateString('vi-VN')}`}
                   </p>
+                </div>
+              ) : (
+                <div className="pt-3 border-t border-[var(--color-border-gray)]">
+                  <p className="text-sm text-[var(--color-text-muted)] mb-2">
+                    Upgrade để transcribe không cần API key
+                  </p>
+                  <div className="flex items-center justify-between p-3 bg-[var(--color-primary)]/10 rounded-lg">
+                    <div>
+                      <p className="text-sm font-medium text-[var(--color-text-base)]">60 phút/tháng</p>
+                      <p className="text-xs text-[var(--color-text-muted)]">Tự động gia hạn</p>
+                    </div>
+                    <a
+                      href="https://buymeacoffee.com/phuocding"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-[var(--color-primary)] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
+                    >
+                      $1/tháng
+                    </a>
+                  </div>
                 </div>
               )}
             </div>
           ) : (
             <div className="p-4 bg-[var(--color-surface-container-low)] border border-[var(--color-border-gray)] rounded-xl text-center">
               <p className="text-sm text-[var(--color-text-muted)] mb-3">
-                Sign in to use transcription without your own API key
+                Đăng nhập để transcribe không cần API key
               </p>
               <Button onClick={() => window.dispatchEvent(new CustomEvent('open-login-modal'))} className="w-full">
-                Sign In
+                Đăng nhập
               </Button>
             </div>
           )}
@@ -183,6 +208,35 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             {hasKey ? 'Update' : 'Save'}
           </Button>
         </div>
+
+        {/* DEV ONLY: Mock Subscription Toggle */}
+        {isDev && isAuthenticated && (
+          <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+            <p className="text-xs text-amber-500 font-semibold mb-2">🧪 DEV MODE</p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => mockSubscription(true)}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors ${
+                  quota?.hasActiveSubscription
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-[var(--color-surface-dark)] text-[var(--color-text-muted)]'
+                }`}
+              >
+                Subscribed
+              </button>
+              <button
+                onClick={() => mockSubscription(false)}
+                className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors ${
+                  !quota?.hasActiveSubscription
+                    ? 'bg-gray-500 text-white'
+                    : 'bg-[var(--color-surface-dark)] text-[var(--color-text-muted)]'
+                }`}
+              >
+                Free
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Version */}
         <div className="pt-4 border-t border-[var(--color-border-gray)]">

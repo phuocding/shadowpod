@@ -14,6 +14,7 @@ interface AuthState {
   logout: () => void;
   refreshUser: () => Promise<void>;
   setQuota: (quota: UserQuota) => void;
+  mockSubscription: (active: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -61,6 +62,31 @@ export const useAuthStore = create<AuthState>()(
 
       setQuota: (quota: UserQuota) => {
         set({ quota });
+      },
+
+      // DEV ONLY: Mock subscription for testing
+      mockSubscription: (active: boolean) => {
+        if (active) {
+          set({
+            quota: {
+              minutesUsed: 15.5,
+              minutesQuota: 60,
+              minutesRemaining: 44.5,
+              hasActiveSubscription: true,
+              expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            },
+          });
+        } else {
+          set({
+            quota: {
+              minutesUsed: 0,
+              minutesQuota: 0,
+              minutesRemaining: 0,
+              hasActiveSubscription: false,
+              expiresAt: null,
+            },
+          });
+        }
       },
     }),
     {

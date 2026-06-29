@@ -5,10 +5,11 @@ import { Button } from '../ui/Button';
 import { FileDropzone } from './FileDropzone';
 import { PreviewPlayer } from './PreviewPlayer';
 import { ApiKeySetupSheet } from '../Onboarding';
-import { transcribe } from '../../services/transcriber';
+import { transcribe, transcribeWithServerAPI } from '../../services/transcriber';
 import { saveAudio } from '../../services/storage';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { usePlayerStore } from '../../stores/playerStore';
+import { useAuthStore } from '../../stores/authStore';
 import { getErrorMessage } from '../../utils/errorMessages';
 import type { ErrorCode } from '../../types';
 
@@ -19,18 +20,34 @@ export function UploadFlow() {
   const apiKey = useSettingsStore((s) => s.deepgramApiKey);
   const loadAndPlay = usePlayerStore((s) => s.loadAndPlay);
   const setPendingSheetOpen = usePlayerStore((s) => s.setPendingSheetOpen);
+  const { isAuthenticated, quota, setQuota } = useAuthStore();
 
   const [step, setStep] = useState<Step>('select');
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<ErrorCode | null>(null);
   const [showApiKeySetup, setShowApiKeySetup] = useState(false);
+  const [transcribeMethod, setTranscribeMethod] = useState<'api' | 'byok'>('api');
+  const [byokFailed, setByokFailed] = useState(false);
 
-  // Auto-show API key setup when no key configured
+  // Check if user can use server API
+  const canUseAPI = isAuthenticated && quota?.hasActiveSubscription && (quota?.minutesRemaining ?? 0) > 0;
+  const hasBYOK = !!apiKey;
+
+  // Determine available methods and default (BYOK first to save quota)
   useEffect(() => {
-    if (!apiKey) {
+    if (hasBYOK) {
+      setTranscribeMethod('byok');
+    } else if (canUseAPI) {
+      setTranscribeMethod('api');
+    }
+  }, [canUseAPI, hasBYOK]);
+
+  // Show API key setup only if no method available
+  useEffect(() => {
+    if (!canUseAPI && !hasBYOK) {
       setShowApiKeySetup(true);
     }
-  }, [apiKey]);
+  }, [canUseAPI, hasBYOK]);
 
   function handleFileSelect(selectedFile: File) {
     setFile(selectedFile);
@@ -44,16 +61,35 @@ export function UploadFlow() {
   }
 
   async function handleTranscribe() {
-    if (!file || !apiKey) return;
+    if (!file) return;
+
+    // Check if we have a valid method
+    if (transcribeMethod === 'byok' && !apiKey) return;
+    if (transcribeMethod === 'api' && !canUseAPI) return;
 
     setStep('transcribing');
     setError(null);
 
     const blob = new Blob([await file.arrayBuffer()], { type: file.type });
-    const result = await transcribe(blob, apiKey);
+
+    let result;
+    if (transcribeMethod === 'api') {
+      // Use server API (no key exposed)
+      result = await transcribeWithServerAPI(blob);
+      if (result.quota) {
+        setQuota(result.quota);
+      }
+    } else {
+      // Use BYOK
+      result = await transcribe(blob, apiKey!);
+    }
 
     if (result.error) {
       setError(result.error);
+      // Track if BYOK failed so we can suggest API
+      if (transcribeMethod === 'byok') {
+        setByokFailed(true);
+      }
       setStep('error');
       return;
     }
@@ -80,7 +116,15 @@ export function UploadFlow() {
   function reset() {
     setFile(null);
     setError(null);
+    setByokFailed(false);
     setStep('select');
+  }
+
+  function switchToApiAndRetry() {
+    setTranscribeMethod('api');
+    setError(null);
+    setByokFailed(false);
+    setStep('preview');
   }
 
   return (
@@ -107,21 +151,77 @@ export function UploadFlow() {
             <p className="text-sm text-[var(--color-text-muted)] text-center">
               Nghe thử để kiểm tra chất lượng audio trước khi transcribe
             </p>
+
+            {/* Method selector - only show if both methods available */}
+            {canUseAPI && hasBYOK && (
+              <div className="flex gap-2 p-1 bg-[var(--color-surface-dark)] rounded-xl">
+                <button
+                  onClick={() => setTranscribeMethod('api')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                    transcribeMethod === 'api'
+                      ? 'bg-[var(--color-primary)] text-white'
+                      : 'text-[var(--color-text-muted)]'
+                  }`}
+                >
+                  ShadowPod API
+                </button>
+                <button
+                  onClick={() => setTranscribeMethod('byok')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                    transcribeMethod === 'byok'
+                      ? 'bg-[var(--color-primary)] text-white'
+                      : 'text-[var(--color-text-muted)]'
+                  }`}
+                >
+                  Your API Key
+                </button>
+              </div>
+            )}
+
+            {/* Method info */}
+            <div className="text-center text-xs text-[var(--color-text-muted)]">
+              {transcribeMethod === 'api' && canUseAPI && (
+                <span className="text-[var(--color-primary)]">
+                  Dùng {quota?.minutesRemaining.toFixed(1)} phút còn lại của bạn
+                </span>
+              )}
+              {transcribeMethod === 'byok' && hasBYOK && (
+                <span>
+                  Dùng API key riêng
+                  {canUseAPI && (
+                    <span className="text-[var(--color-text-muted)]">
+                      {' '}• Còn {quota?.minutesRemaining.toFixed(1)} phút backup
+                    </span>
+                  )}
+                </span>
+              )}
+            </div>
+
             <div className="flex gap-3">
               <Button variant="secondary" onClick={reset} className="flex-1">
                 Chọn file khác
               </Button>
-              <Button onClick={handleTranscribe} disabled={!apiKey} className="flex-1">
+              <Button
+                onClick={handleTranscribe}
+                disabled={transcribeMethod === 'byok' ? !hasBYOK : !canUseAPI}
+                className="flex-1"
+              >
                 Transcribe
               </Button>
             </div>
           </div>
         )}
 
-        {step === 'transcribing' && <TranscribingState />}
+        {step === 'transcribing' && <TranscribingState method={transcribeMethod} />}
 
         {step === 'error' && error && (
-          <ErrorState message={getErrorMessage(error)} onRetry={reset} />
+          <ErrorState
+            message={getErrorMessage(error)}
+            onRetry={reset}
+            showApiSuggestion={byokFailed && canUseAPI}
+            onTryApi={switchToApiAndRetry}
+            quotaRemaining={quota?.minutesRemaining}
+          />
         )}
       </main>
 
@@ -135,7 +235,7 @@ export function UploadFlow() {
   );
 }
 
-function TranscribingState() {
+function TranscribingState({ method }: { method: 'api' | 'byok' }) {
   return (
     <div className="flex flex-col items-center justify-center py-16">
       <div className="flex items-end gap-1 h-12 mb-6">
@@ -150,21 +250,50 @@ function TranscribingState() {
           />
         ))}
       </div>
-      <p className="text-lg text-[var(--color-text-base)]">Transcribing...</p>
+      <p className="text-lg text-[var(--color-text-base)]">Đang transcribe...</p>
       <p className="text-sm text-[var(--color-text-muted)] mt-2">Quá trình này có thể mất vài giây</p>
       <p className="text-xs text-[var(--color-primary)] mt-4 opacity-70">
-        Free • Using your Deepgram API key
+        {method === 'api' ? 'Dùng ShadowPod API' : 'Dùng Deepgram API key của bạn'}
       </p>
     </div>
   );
 }
 
-function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+function ErrorState({
+  message,
+  onRetry,
+  showApiSuggestion,
+  onTryApi,
+  quotaRemaining,
+}: {
+  message: string;
+  onRetry: () => void;
+  showApiSuggestion?: boolean;
+  onTryApi?: () => void;
+  quotaRemaining?: number;
+}) {
   return (
     <div className="flex flex-col items-center justify-center py-16">
       <Icon name="error" size={64} className="text-[var(--color-negative)] mb-4" />
       <p className="text-[var(--color-text-base)] text-center mb-6">{message}</p>
-      <Button onClick={onRetry}>Thử lại</Button>
+
+      {showApiSuggestion && onTryApi && (
+        <div className="w-full max-w-sm mb-4 p-4 bg-[var(--color-primary)]/10 border border-[var(--color-primary)]/30 rounded-xl text-center">
+          <p className="text-sm text-[var(--color-text-base)] mb-2">
+            Thử dùng ShadowPod API?
+          </p>
+          <p className="text-xs text-[var(--color-text-muted)] mb-3">
+            Bạn còn {quotaRemaining?.toFixed(1)} phút
+          </p>
+          <Button onClick={onTryApi} className="w-full">
+            Dùng ShadowPod API
+          </Button>
+        </div>
+      )}
+
+      <Button variant="secondary" onClick={onRetry}>
+        {showApiSuggestion ? 'Chọn file khác' : 'Thử lại'}
+      </Button>
     </div>
   );
 }
