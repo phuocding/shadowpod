@@ -1,0 +1,18 @@
+{
+  "name": "shadowpod-api",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:prod": "wrangler deploy --env production",
+    "db:create": "wrangler d1 create shadowpod-db",
+    "db:migrate": "wrangler d1 execute shadowpod-db --file=schema.sql",
+    "db:migrate:prod": "wrangler d1 execute shadowpod-db --file=schema.sql --remote"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240620.0",
+    "typescript": "^5.4.0",
+    "wrangler": "^3.60.0"
+  }
+}

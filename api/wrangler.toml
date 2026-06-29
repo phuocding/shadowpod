@@ -1,0 +1,22 @@
+name = "shadowpod-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[vars]
+DEEPGRAM_API_KEY = ""  # Set in Cloudflare dashboard (encrypted)
+RESEND_API_KEY = ""    # Set in Cloudflare dashboard (encrypted)
+JWT_SECRET = ""        # Set in Cloudflare dashboard (encrypted)
+CORS_ORIGIN = "https://shadowpod.vercel.app"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "shadowpod-db"
+database_id = "67fd9013-808e-4939-93a6-0b1ba420309d"  # Will be filled after `wrangler d1 create shadowpod-db`
+
+# Development overrides
+[env.dev]
+vars = { CORS_ORIGIN = "http://localhost:5173" }
+
+# Production
+[env.production]
+vars = { CORS_ORIGIN = "https://shadowpod.vercel.app" }

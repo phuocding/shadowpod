@@ -3,6 +3,7 @@ import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useAuthStore } from '../../stores/authStore';
 import { getLatestRelease, type GitHubRelease } from '../../services/githubRelease';
 
 interface SettingsModalProps {
@@ -12,6 +13,7 @@ interface SettingsModalProps {
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const { deepgramApiKey, setApiKey, clearApiKey, theme, toggleTheme } = useSettingsStore();
+  const { isAuthenticated, user, quota, logout, refreshUser } = useAuthStore();
   const [inputKey, setInputKey] = useState(deepgramApiKey || '');
   const [showKey, setShowKey] = useState(false);
   const [release, setRelease] = useState<GitHubRelease | null>(null);
@@ -19,8 +21,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   useEffect(() => {
     if (isOpen) {
       getLatestRelease().then(setRelease);
+      if (isAuthenticated) refreshUser();
     }
-  }, [isOpen]);
+  }, [isOpen, isAuthenticated, refreshUser]);
 
   function handleSave() {
     if (inputKey.trim()) {
@@ -39,6 +42,62 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Settings">
       <div className="space-y-6">
+        {/* Account Section */}
+        <div>
+          <label className="block text-sm font-semibold text-[var(--color-text-base)] mb-3">
+            Account
+          </label>
+          {isAuthenticated && user ? (
+            <div className="p-4 bg-[var(--color-surface-container-low)] border border-[var(--color-border-gray)] rounded-xl">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-[var(--color-primary)]/20 rounded-full flex items-center justify-center">
+                    <Icon name="person" size={20} className="text-[var(--color-primary)]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-[var(--color-text-base)]">{user.email}</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">Subscribed</p>
+                  </div>
+                </div>
+                <button
+                  onClick={logout}
+                  className="text-sm text-[var(--color-negative)] hover:underline"
+                >
+                  Sign out
+                </button>
+              </div>
+              {quota && (
+                <div className="pt-3 border-t border-[var(--color-border-gray)]">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-[var(--color-text-muted)]">Quota used</span>
+                    <span className="text-[var(--color-text-base)]">
+                      {quota.minutesUsed.toFixed(1)} / {quota.minutesQuota} min
+                    </span>
+                  </div>
+                  <div className="h-2 bg-[var(--color-surface-dark)] rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-[var(--color-primary)] transition-all"
+                      style={{ width: `${Math.min(100, (quota.minutesUsed / quota.minutesQuota) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                    {quota.minutesRemaining.toFixed(1)} minutes remaining
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="p-4 bg-[var(--color-surface-container-low)] border border-[var(--color-border-gray)] rounded-xl text-center">
+              <p className="text-sm text-[var(--color-text-muted)] mb-3">
+                Sign in to use transcription without your own API key
+              </p>
+              <Button onClick={() => window.dispatchEvent(new CustomEvent('open-login-modal'))} className="w-full">
+                Sign In
+              </Button>
+            </div>
+          )}
+        </div>
+
         {/* Theme Toggle */}
         <div>
           <label className="block text-sm font-semibold text-[var(--color-text-base)] mb-3">
