@@ -24,6 +24,9 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
   const [showSearchView, setShowSearchView] = useState(false);
   const [currentTab, setCurrentTab] = useState<'home' | 'favorites'>('home');
 
+  // Player state for delete check
+  const { currentAudio, stop } = usePlayerStore();
+
   // Onboarding state
   const {
     hasSeenWelcome,
@@ -68,6 +71,10 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
 
   async function handleDelete(id: string) {
     if (confirm('Xóa audio này?')) {
+      // Stop playback if this audio is currently playing
+      if (currentAudio?.id === id) {
+        stop();
+      }
       await deleteAudio(id);
       setAudioList((prev) => prev.filter((a) => a.id !== id));
     }

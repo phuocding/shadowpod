@@ -253,6 +253,11 @@ class AudioEngine {
       this.audio.load();
       this.audio = null;
     }
+    // Clean up blob URL to prevent memory leaks
+    if (this.currentBlobUrl) {
+      URL.revokeObjectURL(this.currentBlobUrl);
+      this.currentBlobUrl = null;
+    }
     this.onTimeUpdate = null;
     this.onEnded = null;
     this.loopStart = null;

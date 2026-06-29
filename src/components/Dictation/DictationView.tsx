@@ -36,6 +36,8 @@ export function DictationView({ audio, onClose }: DictationViewProps) {
         clearInterval(checkEndIntervalRef.current);
         checkEndIntervalRef.current = null;
       }
+      // Stop audio when unmounting
+      audioEngine.pause();
     };
   }, []);
 
@@ -123,12 +125,13 @@ export function DictationView({ audio, onClose }: DictationViewProps) {
   }, []);
 
   const handleBack = useCallback(() => {
+    stopPlayback(); // Always stop audio when exiting
     if (step === 'summary' || segmentResults.length === 0) {
       onClose();
     } else {
       setShowExitConfirm(true);
     }
-  }, [step, segmentResults.length, onClose]);
+  }, [step, segmentResults.length, onClose, stopPlayback]);
 
   const currentResult = segmentResults.find(r => r.segmentIndex === currentSegmentIndex);
 
@@ -221,7 +224,10 @@ export function DictationView({ audio, onClose }: DictationViewProps) {
                 Continue
               </button>
               <button
-                onClick={onClose}
+                onClick={() => {
+                  stopPlayback();
+                  onClose();
+                }}
                 className="flex-1 py-2 px-4 rounded-xl bg-[var(--color-negative)] text-white"
               >
                 Exit
