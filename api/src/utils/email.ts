@@ -20,7 +20,7 @@ export async function sendOTPEmail({ to, code, apiKey }: SendOTPOptions): Promis
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'ShadowPod <noreply@shadowpod.app>',  // Update with your verified domain
+        from: 'ShadowPod <noreply@hergan.co>',
         to: [to],
         subject: `Your ShadowPod login code: ${code}`,
         html: `
@@ -52,7 +52,7 @@ export async function sendOTPEmail({ to, code, apiKey }: SendOTPOptions): Promis
     const result: ResendResponse = await response.json();
 
     if (!response.ok || result.error) {
-      console.error('[Email] Failed to send:', result.error?.message);
+      console.error('[Email] Failed to send:', response.status, JSON.stringify(result));
       return false;
     }
 
