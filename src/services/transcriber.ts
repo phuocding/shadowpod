@@ -112,12 +112,17 @@ function parseDeepgramResponse(data: DeepgramResponse): Segment[] {
     });
   }
 
-  // Normalize first segment to start at 0
+  // Normalize ALL segments by shifting timestamps if there's an initial offset
   if (segments.length > 0 && segments[0].startTime > 0) {
-    segments[0].startTime = 0;
-    if (segments[0].words.length > 0) {
-      segments[0].words[0].startTime = 0;
-    }
+    const offset = segments[0].startTime;
+    segments.forEach((seg) => {
+      seg.startTime = Math.max(0, seg.startTime - offset);
+      seg.endTime = seg.endTime - offset;
+      seg.words.forEach((w) => {
+        w.startTime = Math.max(0, w.startTime - offset);
+        w.endTime = w.endTime - offset;
+      });
+    });
   }
 
   return segments;
