@@ -11,7 +11,12 @@ interface ResendResponse {
   error?: { message: string };
 }
 
-export async function sendOTPEmail({ to, code, apiKey }: SendOTPOptions): Promise<boolean> {
+interface SendOTPResult {
+  success: boolean;
+  error?: string;
+}
+
+export async function sendOTPEmail({ to, code, apiKey }: SendOTPOptions): Promise<SendOTPResult> {
   try {
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -52,15 +57,17 @@ export async function sendOTPEmail({ to, code, apiKey }: SendOTPOptions): Promis
     const result: ResendResponse = await response.json();
 
     if (!response.ok || result.error) {
-      console.error('[Email] Failed to send:', response.status, JSON.stringify(result));
-      return false;
+      const errorMsg = result.error?.message || `HTTP ${response.status}`;
+      console.error('[Email] Failed to send:', errorMsg);
+      return { success: false, error: errorMsg };
     }
 
     console.log('[Email] Sent successfully:', result.id);
-    return true;
+    return { success: true };
   } catch (error) {
-    console.error('[Email] Error:', error);
-    return false;
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[Email] Error:', errorMsg);
+    return { success: false, error: errorMsg };
   }
 }
 

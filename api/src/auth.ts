@@ -34,14 +34,19 @@ export async function handleRequestOTP(request: Request, env: Env): Promise<Resp
     ).bind(normalizedEmail, code, expiresAt.toISOString()).run();
 
     // Send email
-    const sent = await sendOTPEmail({
+    if (!env.RESEND_API_KEY) {
+      console.error('[Auth] RESEND_API_KEY is not set');
+      return jsonResponse({ error: 'Email service not configured' }, 500);
+    }
+
+    const emailResult = await sendOTPEmail({
       to: normalizedEmail,
       code,
       apiKey: env.RESEND_API_KEY,
     });
 
-    if (!sent) {
-      return jsonResponse({ error: 'Failed to send email' }, 500);
+    if (!emailResult.success) {
+      return jsonResponse({ error: emailResult.error || 'Failed to send email' }, 500);
     }
 
     return jsonResponse({ success: true, message: 'OTP sent to email' });
