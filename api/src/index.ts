@@ -11,11 +11,29 @@ interface Env {
   CORS_ORIGIN: string;
 }
 
+// Allowed origins for CORS
+const ALLOWED_ORIGINS = [
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'https://shadowpod.vercel.app',
+  'https://shadowing-webapp-sandy.vercel.app',
+];
+
+function getAllowedOrigin(request: Request): string {
+  const origin = request.headers.get('Origin');
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    return origin;
+  }
+  return ALLOWED_ORIGINS[0]; // fallback
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const allowedOrigin = getAllowedOrigin(request);
+
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
-      return handleCORS(env);
+      return handleCORS(allowedOrigin);
     }
 
     const url = new URL(request.url);
@@ -47,12 +65,12 @@ export default {
       }
 
       // Add CORS headers to response
-      return addCORSHeaders(response, env);
+      return addCORSHeaders(response, allowedOrigin);
     } catch (error) {
       console.error('[API] Unhandled error:', error);
       return addCORSHeaders(
         jsonResponse({ error: 'Internal server error' }, 500),
-        env
+        allowedOrigin
       );
     }
   },
@@ -80,11 +98,11 @@ async function authenticate(
 }
 
 // CORS handling
-function handleCORS(env: Env): Response {
+function handleCORS(origin: string): Response {
   return new Response(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': env.CORS_ORIGIN,
+      'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       'Access-Control-Max-Age': '86400',
@@ -92,9 +110,9 @@ function handleCORS(env: Env): Response {
   });
 }
 
-function addCORSHeaders(response: Response, env: Env): Response {
+function addCORSHeaders(response: Response, origin: string): Response {
   const newHeaders = new Headers(response.headers);
-  newHeaders.set('Access-Control-Allow-Origin', env.CORS_ORIGIN);
+  newHeaders.set('Access-Control-Allow-Origin', origin);
   newHeaders.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   newHeaders.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
