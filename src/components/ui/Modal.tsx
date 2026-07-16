@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Icon } from './Icon';
 
 interface ModalProps {
@@ -9,6 +9,8 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -17,6 +19,29 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
     }
     return () => {
       document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  // Handle mobile keyboard pushing up modal
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const handleResize = () => {
+      // Calculate keyboard height from viewport difference
+      const keyboardHeight = window.innerHeight - viewport.height;
+      setKeyboardOffset(keyboardHeight > 50 ? keyboardHeight : 0);
+    };
+
+    viewport.addEventListener('resize', handleResize);
+    viewport.addEventListener('scroll', handleResize);
+
+    return () => {
+      viewport.removeEventListener('resize', handleResize);
+      viewport.removeEventListener('scroll', handleResize);
+      setKeyboardOffset(0);
     };
   }, [isOpen]);
 
@@ -31,7 +56,10 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
       />
 
       {/* Modal Content */}
-      <div className="relative w-full sm:max-w-md bg-[var(--color-surface-container)] rounded-t-3xl sm:rounded-2xl p-6 animate-slide-up">
+      <div
+        className="relative w-full sm:max-w-md bg-[var(--color-surface-container)] rounded-t-3xl sm:rounded-2xl p-6 animate-slide-up transition-transform duration-200"
+        style={{ transform: keyboardOffset > 0 ? `translateY(-${keyboardOffset}px)` : undefined }}
+      >
         {/* Drag handle (mobile) */}
         <div className="sm:hidden w-10 h-1 bg-[var(--color-border-gray)] rounded-full mx-auto mb-4" />
 
