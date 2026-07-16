@@ -3,12 +3,18 @@ import { Icon } from './Icon';
 
 type ToastType = 'success' | 'error' | 'info';
 
+interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 interface ToastProps {
   message: string;
   type: ToastType;
   isVisible: boolean;
   onClose: () => void;
   duration?: number;
+  action?: ToastAction;
 }
 
 const iconMap: Record<ToastType, string> = {
@@ -23,13 +29,15 @@ const colorMap: Record<ToastType, string> = {
   info: 'var(--color-announcement)',
 };
 
-export function Toast({ message, type, isVisible, onClose, duration = 3000 }: ToastProps) {
+export function Toast({ message, type, isVisible, onClose, duration = 3000, action }: ToastProps) {
   useEffect(() => {
-    if (isVisible && duration > 0) {
-      const timer = setTimeout(onClose, duration);
+    // Longer duration for toasts with actions
+    const actualDuration = action ? Math.max(duration, 5000) : duration;
+    if (isVisible && actualDuration > 0) {
+      const timer = setTimeout(onClose, actualDuration);
       return () => clearTimeout(timer);
     }
-  }, [isVisible, duration, onClose]);
+  }, [isVisible, duration, onClose, action]);
 
   if (!isVisible) return null;
 
@@ -40,6 +48,17 @@ export function Toast({ message, type, isVisible, onClose, duration = 3000 }: To
       >
         <Icon name={iconMap[type]} size={24} filled style={{ color: colorMap[type] }} />
         <span className="text-base font-bold text-[var(--color-text-base)]">{message}</span>
+        {action && (
+          <button
+            onClick={() => {
+              action.onClick();
+              onClose();
+            }}
+            className="ml-2 px-3 py-1 text-sm font-bold text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 rounded-full transition-colors"
+          >
+            {action.label}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -47,10 +66,10 @@ export function Toast({ message, type, isVisible, onClose, duration = 3000 }: To
 
 // Toast hook for easy usage
 export function useToast() {
-  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: ToastType; action?: ToastAction } | null>(null);
 
-  const showToast = (message: string, type: ToastType = 'info') => {
-    setToast({ message, type });
+  const showToast = (message: string, type: ToastType = 'info', action?: ToastAction) => {
+    setToast({ message, type, action });
   };
 
   const hideToast = () => setToast(null);
@@ -65,6 +84,7 @@ export function useToast() {
         type={toast.type}
         isVisible={!!toast}
         onClose={hideToast}
+        action={toast.action}
       />
     ) : null,
   };

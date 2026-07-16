@@ -5,6 +5,7 @@ import { Button } from '../ui/Button';
 import { FileDropzone } from './FileDropzone';
 import { PreviewPlayer } from './PreviewPlayer';
 import { ApiKeySetupSheet } from '../Onboarding';
+import { useToast } from '../ui/Toast';
 import { transcribe, transcribeWithServerAPI } from '../../services/transcriber';
 import { saveAudio } from '../../services/storage';
 import { useSettingsStore } from '../../stores/settingsStore';
@@ -20,7 +21,9 @@ export function UploadFlow() {
   const apiKey = useSettingsStore((s) => s.deepgramApiKey);
   const loadAndPlay = usePlayerStore((s) => s.loadAndPlay);
   const setPendingSheetOpen = usePlayerStore((s) => s.setPendingSheetOpen);
+  const isPlaying = usePlayerStore((s) => s.isPlaying);
   const { isAuthenticated, quota, setQuota } = useAuthStore();
+  const { showToast, ToastComponent } = useToast();
 
   const [step, setStep] = useState<Step>('select');
   const [file, setFile] = useState<File | null>(null);
@@ -107,10 +110,23 @@ export function UploadFlow() {
       audio.duration
     );
 
-    // Load audio (no auto-play), signal sheet to open, and navigate home
-    await loadAndPlay(id, false);
-    setPendingSheetOpen(true);
-    navigate('/');
+    // Context-aware: don't interrupt if user is listening to something
+    if (isPlaying) {
+      // Show toast with action to open new audio
+      navigate('/');
+      showToast('Transcribe xong!', 'success', {
+        label: 'Mở',
+        onClick: async () => {
+          await loadAndPlay(id, false);
+          setPendingSheetOpen(true);
+        },
+      });
+    } else {
+      // No audio playing - auto-open player (good for first-time users)
+      await loadAndPlay(id, false);
+      setPendingSheetOpen(true);
+      navigate('/');
+    }
   }
 
   function reset() {
@@ -231,6 +247,9 @@ export function UploadFlow() {
         onClose={() => navigate('/')}
         onSuccess={() => setShowApiKeySetup(false)}
       />
+
+      {/* Toast */}
+      {ToastComponent}
     </div>
   );
 }

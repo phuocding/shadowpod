@@ -59,7 +59,7 @@ export async function handleTranscribe(
 
     // Call Deepgram API
     const deepgramResponse = await fetch(
-      'https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true&utterances=true&punctuate=true',
+      'https://api.deepgram.com/v1/listen?model=nova-3&language=en&smart_format=true&punctuate=true&utterances=true&paragraphs=true&utt_split=0.8&numerals=true',
       {
         method: 'POST',
         headers: {

@@ -16,7 +16,7 @@ export function FeaturedCard({ audio, onSelect }: FeaturedCardProps) {
   return (
     <button
       onClick={onSelect}
-      className="flex-shrink-0 w-36 rounded-2xl overflow-hidden bg-[var(--color-surface-container)] transition-transform active:scale-95"
+      className="flex-shrink-0 w-36 lg:w-full rounded-2xl overflow-hidden bg-[var(--color-surface-container)] transition-transform active:scale-95 hover:bg-[var(--color-surface-container-high)]"
     >
       {/* Gradient Background */}
       <div className={`h-24 bg-gradient-to-br ${audio.gradient} relative`}>

@@ -85,7 +85,7 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
   const isRevealed = Math.abs(offsetX) > 30;
 
   return (
-    <div className="relative overflow-hidden rounded-lg">
+    <div className="relative overflow-hidden rounded-lg group">
       {/* Left action - Favorite */}
       <div className="absolute inset-y-0 left-0 w-20 bg-[#1ed760] flex items-center justify-center">
         <button onClick={handleFavorite} className="w-full h-full flex items-center justify-center">
@@ -131,7 +131,37 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
               {formatTime(audio.duration)} • {formatRelativeDate(audio.createdAt)}
             </p>
           </div>
-          {audio.isFavorite && <Icon name="favorite" size={20} className="text-[#1ed760] mr-2" filled />}
+          {/* Desktop hover actions */}
+          <div className="hidden lg:flex items-center gap-1 mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavorite(audio.id);
+              }}
+              className={`p-2 rounded-full transition-colors ${
+                audio.isFavorite
+                  ? 'text-[#1ed760] hover:bg-[#1ed760]/20'
+                  : 'text-[var(--color-text-muted)] hover:bg-white/10 hover:text-[var(--color-text-base)]'
+              }`}
+              title={audio.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <Icon name="favorite" size={20} filled={audio.isFavorite} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(audio.id);
+              }}
+              className="p-2 rounded-full text-[var(--color-text-muted)] hover:bg-red-500/20 hover:text-red-400 transition-colors"
+              title="Delete"
+            >
+              <Icon name="delete" size={20} />
+            </button>
+          </div>
+
+          {/* Favorite indicator - mobile only (shows always if favorited) */}
+          {audio.isFavorite && <Icon name="favorite" size={20} className="text-[#1ed760] mr-2 lg:hidden" filled />}
+
           <button
             onClick={(e) => {
               e.stopPropagation();

@@ -200,6 +200,35 @@ body {
   animation: sheet-slide-down 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
 
+/* Desktop side panel animations */
+@keyframes sheet-slide-left {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes sheet-slide-right {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (min-width: 1024px) {
+  .sheet-enter-right {
+    animation: sheet-slide-left 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+
+  .sheet-exit-right {
+    animation: sheet-slide-right 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  }
+}
+
 .backdrop-enter {
   animation: backdrop-fade-in 0.3s ease-out forwards;
 }

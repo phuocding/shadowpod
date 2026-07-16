@@ -364,11 +364,14 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
       {/* Sheet */}
       <div
         ref={sheetRef}
-        className={`absolute bottom-0 left-0 right-0 h-[92vh] bg-[var(--color-surface-container)] rounded-t-3xl flex flex-col ${isClosing ? 'sheet-exit' : 'sheet-enter'}`}
+        className={`absolute bg-[var(--color-surface-container)] flex flex-col
+          bottom-0 left-0 right-0 h-[92vh] rounded-t-3xl
+          lg:top-0 lg:right-0 lg:bottom-0 lg:left-auto lg:w-[420px] lg:h-full lg:rounded-t-none lg:rounded-l-3xl
+          ${isClosing ? 'sheet-exit lg:sheet-exit-right' : 'sheet-enter lg:sheet-enter-right'}`}
       >
-        {/* Drag Handle */}
+        {/* Drag Handle - mobile only */}
         <div
-          className="shrink-0 pt-3 pb-2 cursor-grab active:cursor-grabbing"
+          className="shrink-0 pt-3 pb-2 cursor-grab active:cursor-grabbing lg:hidden"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}

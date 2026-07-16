@@ -15,7 +15,7 @@ export async function transcribe(
 ): Promise<TranscribeResult> {
   try {
     const response = await fetch(
-      `${DEEPGRAM_API_URL}?model=nova-2&smart_format=true&punctuate=true&utterances=true&language=en`,
+      `${DEEPGRAM_API_URL}?model=nova-3&language=en&smart_format=true&punctuate=true&utterances=true&paragraphs=true&utt_split=0.8&numerals=true`,
       {
         method: 'POST',
         headers: {

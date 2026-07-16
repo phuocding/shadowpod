@@ -9,6 +9,7 @@ import { EmptyState } from './EmptyState';
 import { FeaturedSection } from '../Featured';
 import { WelcomeScreen, UploadPrompt, UploadGuideModal } from '../Onboarding';
 import { SearchView } from '../SearchView';
+import { DesktopSidebar } from '../Layout';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { usePlayerStore } from '../../stores/playerStore';
 
@@ -120,23 +121,31 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--color-background)]">
-      {/* Header - Logo + Search */}
-      <header className="sticky top-0 z-50 flex justify-between items-center px-4 py-3 bg-gradient-to-b from-[var(--color-background)] to-transparent">
-        <div className="flex items-center gap-2">
+    <div className="flex flex-col min-h-screen bg-[var(--color-background)] lg:ml-60">
+      {/* Desktop Sidebar */}
+      <DesktopSidebar
+        currentTab={currentTab}
+        onTabChange={setCurrentTab}
+        onOpenSettings={onOpenSettings}
+        onUpload={() => navigate('/upload')}
+      />
+
+      {/* Header - Logo + Search (mobile only for logo, search always visible) */}
+      <header className="sticky top-0 z-30 flex justify-between items-center px-4 py-3 bg-gradient-to-b from-[var(--color-background)] to-transparent lg:justify-end">
+        <div className="flex items-center gap-2 lg:hidden">
           <img src="/screen.png" alt="ShadowPod" className="w-8 h-8" />
           <span className="text-xl font-bold text-[var(--color-primary)] tracking-tight">ShadowPod</span>
         </div>
         <button
           onClick={() => setShowSearchView(true)}
-          className="rounded-full w-10 h-10 flex items-center justify-center transition-all active:scale-95 bg-[var(--color-surface-container)] text-[var(--color-text-base)]"
+          className="rounded-full w-10 h-10 flex items-center justify-center transition-all active:scale-95 bg-[var(--color-surface-container)] text-[var(--color-text-base)] hover:bg-[var(--color-surface-container-high)]"
         >
           <Icon name="search" />
         </button>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 px-4 pt-2 pb-40 max-w-2xl mx-auto w-full">
+      <main className="flex-1 px-4 pt-2 pb-40 lg:pb-8 max-w-2xl lg:max-w-5xl mx-auto w-full">
         {/* Featured Section - Always visible on Home tab */}
         {currentTab === 'home' && (
           <FeaturedSection onSelectAudio={handleSelectFeatured} />
@@ -156,7 +165,7 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
         ) : filteredList.length === 0 ? (
           <p className="text-center text-[var(--color-text-muted)] py-8">Không tìm thấy audio</p>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
             {filteredList.map((audio) => (
               <AudioCard
                 key={audio.id}
@@ -194,8 +203,8 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
         }}
       />
 
-      {/* Bottom Nav - Threads Style */}
-      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-md z-50 bg-[var(--color-surface-container-low)]/80 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+      {/* Bottom Nav - Threads Style (mobile only) */}
+      <nav className="lg:hidden fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-md z-50 bg-[var(--color-surface-container-low)]/80 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
         <div className="flex justify-around items-center h-16 px-2">
           {/* Home */}
           <button

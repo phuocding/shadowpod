@@ -22,10 +22,11 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 
   useEffect(() => {
     if (isOpen) {
+      setInputKey(deepgramApiKey || '');
       getLatestRelease().then(setRelease);
       if (isAuthenticated) refreshUser();
     }
-  }, [isOpen, isAuthenticated, refreshUser]);
+  }, [isOpen, isAuthenticated, refreshUser, deepgramApiKey]);
 
   function handleSave() {
     if (inputKey.trim()) {

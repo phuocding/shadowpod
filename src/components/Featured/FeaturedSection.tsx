@@ -19,19 +19,19 @@ export function FeaturedSection({ onSelectAudio }: FeaturedSectionProps) {
         </span>
       </div>
 
-      {/* Horizontal Scroll - edge to edge with proper padding */}
-      <div className="overflow-x-auto scrollbar-hide -mx-4">
-        <div className="flex gap-3 px-4 pb-2 snap-x snap-mandatory">
+      {/* Mobile: Horizontal Scroll | Desktop: Grid */}
+      <div className="overflow-x-auto scrollbar-hide -mx-4 lg:mx-0 lg:overflow-visible">
+        <div className="flex gap-3 px-4 pb-2 snap-x snap-mandatory lg:grid lg:grid-cols-3 xl:grid-cols-4 lg:px-0 lg:gap-4">
           {featuredContent.map((audio) => (
-            <div key={audio.id} className="snap-start flex-shrink-0">
+            <div key={audio.id} className="snap-start flex-shrink-0 lg:flex-shrink">
               <FeaturedCard
                 audio={audio}
                 onSelect={() => onSelectAudio(audio)}
               />
             </div>
           ))}
-          {/* End padding spacer */}
-          <div className="w-1 flex-shrink-0" />
+          {/* End padding spacer - mobile only */}
+          <div className="w-1 flex-shrink-0 lg:hidden" />
         </div>
       </div>
     </section>
