@@ -79,7 +79,7 @@ class AudioEngine {
     return new Promise((resolve, reject) => {
       const howlConfig: HowlOptions = {
         src: [src],
-        html5: false, // Use Web Audio API for better seeking
+        html5: true, // Use HTML5 Audio for better mobile compatibility with blob URLs
         preload: true,
         onload: () => {
           if (currentLoadId !== this.loadId) {
