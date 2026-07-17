@@ -299,17 +299,15 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                       : 'border-[var(--color-border-gray)] focus:border-[var(--color-primary)]'
                   } ${keyStatus === 'validating' ? 'opacity-60' : ''}`}
                 />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                   {keyStatus === 'validating' && (
-                    <div className="w-8 h-8 flex items-center justify-center">
-                      <Icon name="progress_activity" size={18} className="animate-spin text-[var(--color-text-muted)]" />
-                    </div>
+                    <Icon name="progress_activity" size={18} className="animate-spin text-[var(--color-text-muted)]" />
                   )}
                   {inputKey && keyStatus !== 'validating' && isInputFocused && (
                     <button
                       type="button"
                       onClick={handleClearKey}
-                      className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
+                      className="p-0.5 hover:bg-white/10 rounded-full transition-colors"
                     >
                       <Icon name="cancel" size={18} className="text-[var(--color-text-muted)]" />
                     </button>
@@ -317,7 +315,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   <button
                     type="button"
                     onClick={() => setShowKey(!showKey)}
-                    className="w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
+                    className="p-0.5 hover:bg-white/10 rounded-full transition-colors"
                   >
                     <Icon name={showKey ? 'visibility_off' : 'visibility'} size={18} className="text-[var(--color-text-muted)]" />
                   </button>

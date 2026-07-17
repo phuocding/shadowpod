@@ -21,14 +21,7 @@ export function UpdatePrompt() {
     },
   });
 
-  const handleUpdate = async () => {
-    // Clear all caches first to ensure fresh content
-    if ('caches' in window) {
-      const cacheNames = await caches.keys();
-      await Promise.all(cacheNames.map(name => caches.delete(name)));
-      console.log('[PWA] Cleared all caches:', cacheNames);
-    }
-    // Then update service worker and reload
+  const handleUpdate = () => {
     updateServiceWorker(true);
   };
 

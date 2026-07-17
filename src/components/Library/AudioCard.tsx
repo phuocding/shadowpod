@@ -132,13 +132,13 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
             </p>
           </div>
           {/* Desktop hover actions */}
-          <div className="hidden lg:flex items-center mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="hidden lg:flex items-center gap-1 mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleFavorite(audio.id);
               }}
-              className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
+              className={`p-2 rounded-full transition-colors ${
                 audio.isFavorite
                   ? 'text-[#1ed760] hover:bg-[#1ed760]/20'
                   : 'text-[var(--color-text-muted)] hover:bg-white/10 hover:text-[var(--color-text-base)]'
@@ -152,7 +152,7 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
                 e.stopPropagation();
                 onDelete(audio.id);
               }}
-              className="w-10 h-10 flex items-center justify-center rounded-full text-[var(--color-text-muted)] hover:bg-red-500/20 hover:text-red-400 transition-colors"
+              className="p-2 rounded-full text-[var(--color-text-muted)] hover:bg-red-500/20 hover:text-red-400 transition-colors"
               title="Delete"
             >
               <Icon name="delete" size={20} />
@@ -160,11 +160,7 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
           </div>
 
           {/* Favorite indicator - mobile only (shows always if favorited) */}
-          {audio.isFavorite && (
-            <div className="w-10 h-10 flex items-center justify-center lg:hidden">
-              <Icon name="favorite" size={20} className="text-[#1ed760]" filled />
-            </div>
-          )}
+          {audio.isFavorite && <Icon name="favorite" size={20} className="text-[#1ed760] mr-2 lg:hidden" filled />}
 
           <button
             onClick={(e) => {
@@ -173,7 +169,7 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
               if (isThisAudio) toggle();
               else loadAndPlay(audio.id);
             }}
-            className="w-10 h-10 flex items-center justify-center text-[var(--color-text-base)] hover:text-[var(--color-primary)] transition-colors"
+            className="text-[var(--color-text-base)] hover:text-[var(--color-primary)] transition-colors"
           >
             <Icon name={isCurrentlyPlaying ? 'pause' : 'play_arrow'} filled size={28} />
           </button>

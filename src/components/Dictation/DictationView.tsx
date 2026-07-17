@@ -41,7 +41,7 @@ export function DictationView({ audio, onClose }: DictationViewProps) {
     };
   }, []);
 
-  const playSegment = useCallback(async () => {
+  const playSegment = useCallback(() => {
     if (!currentSegment) return;
 
     // Clear any existing interval first
@@ -50,14 +50,13 @@ export function DictationView({ audio, onClose }: DictationViewProps) {
       checkEndIntervalRef.current = null;
     }
 
-    // Use seekAndPlay for reliable segment playback
-    await audioEngine.seekAndPlay(currentSegment.startTime);
+    audioEngine.seek(currentSegment.startTime);
+    audioEngine.play();
     setIsPlaying(true);
 
-    // Check for segment end
     checkEndIntervalRef.current = setInterval(() => {
       const currentTime = audioEngine.getCurrentTime();
-      if (currentTime >= currentSegment.endTime || !audioEngine.isPlaying()) {
+      if (currentTime >= currentSegment.endTime) {
         audioEngine.pause();
         setIsPlaying(false);
         if (checkEndIntervalRef.current) {
@@ -65,7 +64,7 @@ export function DictationView({ audio, onClose }: DictationViewProps) {
           checkEndIntervalRef.current = null;
         }
       }
-    }, 50); // Check more frequently
+    }, 100);
   }, [currentSegment]);
 
   const handleSubmit = useCallback(() => {

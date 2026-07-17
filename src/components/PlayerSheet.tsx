@@ -52,28 +52,6 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
     setLocalTranscript(currentAudio?.transcript ?? []);
   }, [isPlaying, currentTime, currentSegmentIndex, currentAudio]);
 
-  // Sync with actual audioEngine state when sheet opens (e.g., returning from Dictation)
-  useEffect(() => {
-    if (!isOpen) return;
-
-    // Sync playing state with actual audioEngine state
-    const actualIsPlaying = audioEngine.isPlaying();
-    setLocalIsPlaying(actualIsPlaying);
-    if (actualIsPlaying !== isPlaying) {
-      if (actualIsPlaying) {
-        playerStore.play();
-      } else {
-        playerStore.pause();
-      }
-    }
-
-    // Reset loop state to prevent stale behavior
-    setLoopMode('none');
-    setLoopSegmentId(undefined);
-    audioEngine.setLoop(null, null);
-    audioEngine.setLoopAll(false);
-  }, [isOpen]);
-
   // Setup audio listeners when sheet opens
   useEffect(() => {
     if (!isOpen || !currentAudio) return;
