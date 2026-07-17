@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Icon } from '../ui/Icon';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { handleInputFocus } from '../../utils/keyboardScroll';
 
 interface ApiKeySetupSheetProps {
   isOpen: boolean;
@@ -100,6 +101,7 @@ export function ApiKeySetupSheet({ isOpen, onClose, onSuccess }: ApiKeySetupShee
                   type={showKey ? 'text' : 'password'}
                   value={inputKey}
                   onChange={(e) => setInputKey(e.target.value)}
+                  onFocus={handleInputFocus}
                   placeholder="dg_a7b2..."
                   className="w-full bg-[var(--color-surface-dark)] border border-white/10 focus:border-[var(--color-primary)]/50 focus:ring-4 focus:ring-[var(--color-primary)]/10 rounded-xl px-4 py-3 text-[var(--color-text-base)] placeholder:text-[var(--color-text-muted)]/40 transition-all outline-none"
                 />

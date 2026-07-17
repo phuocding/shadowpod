@@ -47,6 +47,8 @@ export default {
         response = await handleRequestOTP(request, env);
       } else if (path === '/auth/verify-otp' && request.method === 'POST') {
         response = await handleVerifyOTP(request, env);
+      } else if (path === '/api/validate-key' && request.method === 'POST') {
+        response = await handleValidateKey(request);
       } else if (path === '/health') {
         response = jsonResponse({ status: 'ok', timestamp: new Date().toISOString() });
       }
@@ -128,4 +130,40 @@ function jsonResponse(data: unknown, status: number = 200): Response {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
+}
+
+// Validate user's Deepgram API key by proxying to Deepgram
+async function handleValidateKey(request: Request): Promise<Response> {
+  try {
+    const { apiKey } = await request.json() as { apiKey?: string };
+
+    if (!apiKey || !apiKey.trim()) {
+      return jsonResponse({ valid: false, error: 'invalid_key', message: 'API key is required' }, 400);
+    }
+
+    const response = await fetch('https://api.deepgram.com/v1/projects', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Token ${apiKey.trim()}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      return jsonResponse({ valid: true });
+    }
+
+    if (response.status === 401) {
+      return jsonResponse({ valid: false, error: 'invalid_key', message: 'Key không hợp lệ. Vui lòng kiểm tra lại.' });
+    }
+
+    if (response.status === 403) {
+      return jsonResponse({ valid: false, error: 'quota_exceeded', message: 'Key đã hết dung lượng (Quota). Vui lòng nạp thêm.' });
+    }
+
+    return jsonResponse({ valid: false, error: 'unknown', message: `Lỗi không xác định (${response.status})` });
+  } catch (error) {
+    console.error('[API] Validate key error:', error);
+    return jsonResponse({ valid: false, error: 'network_error', message: 'Không thể kết nối đến Deepgram' }, 500);
+  }
 }

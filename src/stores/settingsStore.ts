@@ -42,6 +42,11 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'shadowpod-settings',
+      // Only persist API key and theme, not playback settings
+      partialize: (state) => ({
+        deepgramApiKey: state.deepgramApiKey,
+        theme: state.theme,
+      }),
       onRehydrateStorage: () => (state) => {
         if (state?.theme) {
           document.documentElement.classList.remove('dark', 'light');

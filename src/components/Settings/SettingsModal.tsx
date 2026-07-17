@@ -1,10 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useAuthStore } from '../../stores/authStore';
 import { getLatestRelease, type GitHubRelease } from '../../services/githubRelease';
+import { handleInputFocus } from '../../utils/keyboardScroll';
+import { validateDeepgramKey } from '../../services/deepgramValidation';
+
+type KeyStatus = 'idle' | 'validating' | 'valid' | 'invalid';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -17,28 +21,72 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [inputKey, setInputKey] = useState(deepgramApiKey || '');
   const [showKey, setShowKey] = useState(false);
   const [release, setRelease] = useState<GitHubRelease | null>(null);
+  const [keyStatus, setKeyStatus] = useState<KeyStatus>('idle');
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [isApiKeyExpanded, setIsApiKeyExpanded] = useState(false);
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDev = window.location.hostname === 'localhost';
 
   useEffect(() => {
     if (isOpen) {
       setInputKey(deepgramApiKey || '');
+      setKeyStatus(deepgramApiKey ? 'valid' : 'idle');
+      setValidationError(null);
+      setIsApiKeyExpanded(false);
+      setShowKey(false);
       getLatestRelease().then(setRelease);
       if (isAuthenticated) refreshUser();
     }
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [isOpen, isAuthenticated, refreshUser, deepgramApiKey]);
 
-  function handleSave() {
-    if (inputKey.trim()) {
-      setApiKey(inputKey.trim());
-      onClose();
-    }
-  }
+  const validateAndSave = useCallback(async (key: string) => {
+    if (!key.trim()) return;
+    if (key.trim() === deepgramApiKey) return;
 
-  function handleClear() {
+    setKeyStatus('validating');
+    setValidationError(null);
+
+    const result = await validateDeepgramKey(key.trim());
+
+    if (result.valid) {
+      setKeyStatus('valid');
+      setApiKey(key.trim());
+    } else {
+      setKeyStatus('invalid');
+      setValidationError(result.message || 'Key không hợp lệ');
+    }
+  }, [deepgramApiKey, setApiKey]);
+
+  const handleKeyChange = (value: string) => {
+    setInputKey(value);
+    if (keyStatus === 'invalid') {
+      setKeyStatus('idle');
+      setValidationError(null);
+    }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (value.trim() && value.trim() !== deepgramApiKey) {
+      debounceRef.current = setTimeout(() => validateAndSave(value), 800);
+    }
+  };
+
+  const handleKeyBlur = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (inputKey.trim() && inputKey.trim() !== deepgramApiKey) {
+      validateAndSave(inputKey);
+    }
+  };
+
+  const handleClearKey = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
     clearApiKey();
     setInputKey('');
-  }
+    setKeyStatus('idle');
+    setValidationError(null);
+  };
 
   const hasKey = !!deepgramApiKey;
 
@@ -47,9 +95,23 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
       <div className="space-y-6">
         {/* Account Section */}
         <div>
-          <label className="block text-sm font-semibold text-[var(--color-text-base)] mb-3">
-            Account
-          </label>
+          <div className="flex items-center justify-between mb-3">
+            <label className="block text-sm font-semibold text-[var(--color-text-base)]">
+              Account
+            </label>
+            {isAuthenticated && quota?.hasActiveSubscription && (
+              <span className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                hasKey && keyStatus === 'invalid'
+                  ? 'bg-emerald-500/20 text-emerald-400'
+                  : 'bg-gray-500/20 text-gray-400'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  hasKey && keyStatus === 'invalid' ? 'bg-emerald-400 animate-pulse' : 'bg-gray-400'
+                }`} />
+                {hasKey && keyStatus === 'invalid' ? 'Đang kích hoạt dự phòng' : 'Chế độ chờ'}
+              </span>
+            )}
+          </div>
           {isAuthenticated && user ? (
             <div className="p-4 bg-[var(--color-surface-container-low)] border border-[var(--color-border-gray)] rounded-xl">
               <div className="flex items-center justify-between mb-3">
@@ -91,24 +153,58 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   </p>
                 </div>
               ) : (
-                <div className="pt-3 border-t border-[var(--color-border-gray)]">
-                  <p className="text-sm text-[var(--color-text-muted)] mb-2">
-                    Upgrade để transcribe không cần API key
-                  </p>
-                  <div className="flex items-center justify-between p-3 bg-[var(--color-primary)]/10 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-[var(--color-text-base)]">60 phút/tháng</p>
-                      <p className="text-xs text-[var(--color-text-muted)]">Tự động gia hạn</p>
-                    </div>
-                    <a
-                      href="https://buymeacoffee.com/phuocding"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 bg-[var(--color-primary)] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
-                    >
-                      $1/tháng
-                    </a>
-                  </div>
+                <div className={`pt-3 border-t transition-colors ${
+                  keyStatus === 'invalid'
+                    ? 'border-amber-500/50'
+                    : 'border-[var(--color-border-gray)]'
+                }`}>
+                  {keyStatus === 'invalid' ? (
+                    <>
+                      <div className="flex items-center gap-2 mb-3 text-amber-400">
+                        <Icon name="warning" size={16} />
+                        <p className="text-sm font-medium">
+                          Key cá nhân lỗi. Mua gói dự phòng?
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-amber-500/20 border border-amber-500/30 rounded-lg">
+                        <div>
+                          <p className="text-sm font-medium text-[var(--color-text-base)]">60 phút/tháng</p>
+                          <p className="text-xs text-[var(--color-text-muted)]">Học không gián đoạn</p>
+                        </div>
+                        <a
+                          href="https://buymeacoffee.com/phuocding"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-lg hover:bg-amber-400 transition-colors animate-pulse"
+                        >
+                          $1/tháng
+                        </a>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-[var(--color-text-muted)] mb-2">
+                        {hasKey
+                          ? 'Chuẩn bị sẵn 60 phút dự phòng để học không gián đoạn'
+                          : 'Upgrade để transcribe không cần API key'
+                        }
+                      </p>
+                      <div className="flex items-center justify-between p-3 bg-[var(--color-primary)]/10 rounded-lg">
+                        <div>
+                          <p className="text-sm font-medium text-[var(--color-text-base)]">60 phút/tháng</p>
+                          <p className="text-xs text-[var(--color-text-muted)]">Tự động gia hạn</p>
+                        </div>
+                        <a
+                          href="https://buymeacoffee.com/phuocding"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-[var(--color-primary)] text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
+                        >
+                          $1/tháng
+                        </a>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -145,69 +241,106 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
           </button>
         </div>
 
-        {/* API Key Section */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-semibold text-[var(--color-text-base)]">
-              Deepgram API Key
-            </label>
-            <span className="text-xs px-2 py-0.5 bg-[var(--color-primary)]/20 text-[var(--color-primary)] rounded-full">
-              Free forever
-            </span>
-          </div>
-
-          <div className="relative">
-            <input
-              type={showKey ? 'text' : 'password'}
-              value={inputKey}
-              onChange={(e) => setInputKey(e.target.value)}
-              placeholder="Enter your API key"
-              className="w-full px-4 py-3 pr-12 bg-[var(--color-surface-dark)] border border-[var(--color-border-gray)] rounded-xl text-[var(--color-text-base)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)]"
-            />
-            <button
-              type="button"
-              onClick={() => setShowKey(!showKey)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-base)]"
-            >
-              <Icon name={showKey ? 'visibility_off' : 'visibility'} size={20} />
-            </button>
-          </div>
-
-          <p className="mt-2 text-sm text-[var(--color-text-muted)]">
-            Get your free API key at{' '}
-            <a
-              href="https://deepgram.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[var(--color-primary)] hover:underline"
-            >
-              deepgram.com
-            </a>
-            {' '}— includes 12,000 free minutes/year
-          </p>
-
-          {hasKey && (
-            <div className="mt-3 flex items-center gap-2 text-sm text-[var(--color-success)]">
-              <Icon name="check_circle" size={16} />
-              <span>API key saved</span>
-            </div>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-3">
-          {hasKey && (
-            <Button variant="ghost" onClick={handleClear} className="text-[var(--color-negative)]">
-              Clear Key
-            </Button>
-          )}
-          <Button
-            onClick={handleSave}
-            disabled={!inputKey.trim()}
-            className="flex-1"
+        {/* API Key Section - Accordion */}
+        <div className="bg-[var(--color-surface-container-low)] border border-[var(--color-border-gray)] rounded-xl overflow-hidden">
+          <button
+            onClick={() => setIsApiKeyExpanded(!isApiKeyExpanded)}
+            className="w-full flex items-center justify-between p-4"
           >
-            {hasKey ? 'Update' : 'Save'}
-          </Button>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-[var(--color-text-base)]">
+                Cấu hình Deepgram API cá nhân (BYOK)
+              </span>
+              {hasKey && isAuthenticated && (
+                <span className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                  keyStatus === 'invalid'
+                    ? 'bg-red-500/20 text-red-400'
+                    : 'bg-emerald-500/20 text-emerald-400'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    keyStatus === 'invalid' ? 'bg-red-400' : 'bg-emerald-400'
+                  }`} />
+                  {keyStatus === 'invalid' ? 'Lỗi' : 'Đang sử dụng'}
+                </span>
+              )}
+            </div>
+            <Icon
+              name={isApiKeyExpanded ? 'expand_less' : 'expand_more'}
+              size={20}
+              className="text-[var(--color-text-muted)]"
+            />
+          </button>
+
+          <div className={`transition-all duration-200 ease-out ${
+            isApiKeyExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+          } overflow-hidden`}>
+            <div className="px-4 pb-4 space-y-3">
+              <div className="relative">
+                <input
+                  type={showKey ? 'text' : 'password'}
+                  value={inputKey}
+                  onChange={(e) => handleKeyChange(e.target.value)}
+                  onBlur={handleKeyBlur}
+                  onFocus={handleInputFocus}
+                  placeholder="Dán API key vào đây..."
+                  disabled={keyStatus === 'validating'}
+                  className={`w-full px-4 py-3 pr-24 bg-[var(--color-surface-dark)] border rounded-xl text-[var(--color-text-base)] placeholder:text-[var(--color-text-muted)] focus:outline-none transition-all ${
+                    keyStatus === 'valid' && inputKey
+                      ? 'border-emerald-500'
+                      : keyStatus === 'invalid'
+                      ? 'border-red-500'
+                      : 'border-[var(--color-border-gray)] focus:border-[var(--color-primary)]'
+                  } ${keyStatus === 'validating' ? 'opacity-60' : ''}`}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  {keyStatus === 'validating' && (
+                    <Icon name="progress_activity" size={18} className="animate-spin text-[var(--color-text-muted)]" />
+                  )}
+                  {keyStatus === 'valid' && inputKey && (
+                    <Icon name="check_circle" size={18} className="text-emerald-400" />
+                  )}
+                  {inputKey && keyStatus !== 'validating' && (
+                    <button
+                      type="button"
+                      onClick={handleClearKey}
+                      className="p-0.5 hover:bg-white/10 rounded-full transition-colors"
+                    >
+                      <Icon name="cancel" size={18} className="text-[var(--color-text-muted)]" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowKey(!showKey)}
+                    className="p-0.5 hover:bg-white/10 rounded-full transition-colors"
+                  >
+                    <Icon name={showKey ? 'visibility_off' : 'visibility'} size={18} className="text-[var(--color-text-muted)]" />
+                  </button>
+                </div>
+              </div>
+
+              {keyStatus === 'valid' && inputKey && (
+                <p className="text-xs text-emerald-400 flex items-center gap-1">
+                  <Icon name="check" size={14} />
+                  Đã tự động lưu và xác thực thành công
+                </p>
+              )}
+
+              {validationError && (
+                <p className="text-xs text-red-400 flex items-center gap-1">
+                  <Icon name="warning" size={14} />
+                  {validationError}
+                </p>
+              )}
+
+              <p className="text-xs text-[var(--color-text-muted)]">
+                Lấy key miễn phí tại{' '}
+                <a href="https://deepgram.com" target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline">
+                  deepgram.com
+                </a>
+                {' '}— 12,000 phút/năm miễn phí
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* DEV ONLY: Mock Subscription Toggle */}

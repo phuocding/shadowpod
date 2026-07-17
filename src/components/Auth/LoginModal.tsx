@@ -5,6 +5,7 @@ import { Button } from '../ui/Button';
 import { Icon } from '../ui/Icon';
 import { requestOTP, verifyOTP } from '../../services/api';
 import { useAuthStore } from '../../stores/authStore';
+import { handleInputFocus } from '../../utils/keyboardScroll';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -101,11 +102,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 onKeyDown={(e) => handleKeyDown(e, handleRequestOTP)}
-                onFocus={(e) => {
-                  setTimeout(() => {
-                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }, 300);
-                }}
+                onFocus={handleInputFocus}
                 placeholder="your@email.com"
                 autoFocus
                 className="w-full px-4 py-3 bg-[var(--color-surface-dark)] border border-[var(--color-border-gray)] rounded-xl text-[var(--color-text-base)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-primary)]"
@@ -140,11 +137,7 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 onKeyDown={(e) => handleKeyDown(e, handleVerifyOTP)}
-                onFocus={(e) => {
-                  setTimeout(() => {
-                    e.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  }, 300);
-                }}
+                onFocus={handleInputFocus}
                 placeholder="000000"
                 autoFocus
                 maxLength={6}
