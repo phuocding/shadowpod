@@ -84,8 +84,21 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
     audioEngine.setSpeed(playbackSpeed);
   }, [isOpen, currentAudio, loopMode, playbackSpeed, playerStore]);
 
-  // Loop mode effect
+  // Sync loopSegmentId when sheet opens and loop was set from MiniPlayer
   useEffect(() => {
+    if (!isOpen || !currentAudio?.transcript) return;
+    if (loopMode === 'sentence' && loopSegmentId === undefined) {
+      const segment = currentAudio.transcript[localSegmentIndex];
+      if (segment) {
+        setLoopSegmentId(segment.id);
+      }
+    }
+  }, [isOpen, loopMode, loopSegmentId, currentAudio, localSegmentIndex]);
+
+  // Loop mode effect - only manage loop when sheet is open
+  useEffect(() => {
+    if (!isOpen) return; // Let MiniPlayer manage loop when sheet is closed
+
     if (loopMode === 'sentence' && loopSegmentId !== undefined && currentAudio?.transcript) {
       const segment = currentAudio.transcript.find((s) => s.id === loopSegmentId);
       if (segment) {
@@ -94,11 +107,11 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
     } else if (loopMode === 'all') {
       audioEngine.setLoop(null, null);
       audioEngine.setLoopAll(true);
-    } else {
+    } else if (loopMode === 'none') {
       audioEngine.setLoop(null, null);
       audioEngine.setLoopAll(false);
     }
-  }, [loopMode, loopSegmentId, currentAudio]);
+  }, [isOpen, loopMode, loopSegmentId, currentAudio]);
 
   // Handle close with animation
   const handleClose = useCallback(() => {
@@ -106,6 +119,7 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
     setIsEditMode(false);
     setSelectedSegments([]);
     setSplitModalSegment(null);
+    // Keep loopSegmentId - audioEngine loop should persist while playing
 
     // Keep playback settings - they sync with MiniPlayer via settingsStore
 

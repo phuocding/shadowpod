@@ -111,7 +111,15 @@ export function MiniPlayer({ onOpenSheet }: MiniPlayerProps) {
             </button>
             {/* Close */}
             <button
-              onClick={stop}
+              onClick={() => {
+                // Reset playback settings when stopping audio
+                setLoopMode('none');
+                setPlaybackSpeed('default');
+                audioEngine.setLoop(null, null);
+                audioEngine.setLoopAll(false);
+                audioEngine.setSpeed('default');
+                stop();
+              }}
               className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-base)] transition-colors"
               title="Close"
             >
