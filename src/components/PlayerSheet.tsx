@@ -221,8 +221,15 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
       setLoopSegmentId(segment.id);
     }
     if (!localIsPlaying) {
-      // Use seekAndPlay for mobile compatibility - waits for seek to complete
-      audioEngine.seekAndPlay(segment.startTime);
+      // Platform-specific handling:
+      // - Mobile: Use seekAndPlay (async) to wait for buffer
+      // - Desktop: Use seek+play (sync) for zero latency
+      if (audioEngine.isMobile()) {
+        audioEngine.seekAndPlay(segment.startTime);
+      } else {
+        audioEngine.seek(segment.startTime);
+        audioEngine.play();
+      }
       playerStore.play();
       setLocalIsPlaying(true);
     } else {

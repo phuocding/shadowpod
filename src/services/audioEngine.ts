@@ -3,6 +3,13 @@ import type { PlaybackSpeed } from '../types';
 type TimeUpdateCallback = (currentTime: number) => void;
 type EndedCallback = () => void;
 
+// Platform detection for mobile-specific audio handling
+const isMobile = (): boolean => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+};
+
 class AudioEngine {
   private audio: HTMLAudioElement | null = null;
   private onTimeUpdate: TimeUpdateCallback | null = null;
@@ -14,6 +21,7 @@ class AudioEngine {
   private loopCheckInterval: number | null = null;
   private static readonly LOOP_CHECK_INTERVAL_MS = 50;
   private static readonly LOOP_BUFFER_MS = 0.15; // 150ms buffer for mobile compatibility
+  private static readonly SEEK_FALLBACK_MS = 50; // Fallback timeout for seeked event
 
   async load(blob: Blob): Promise<number> {
     // Validate blob
@@ -43,6 +51,8 @@ class AudioEngine {
 
     this.currentBlobUrl = URL.createObjectURL(blob);
     this.audio = new Audio(this.currentBlobUrl);
+    // Preload full audio for better seeking performance on mobile
+    this.audio.preload = 'auto';
 
     return new Promise((resolve, reject) => {
       if (!this.audio) {
@@ -108,6 +118,8 @@ class AudioEngine {
     }
 
     this.audio = new Audio(url);
+    // Preload full audio for better seeking performance on mobile
+    this.audio.preload = 'auto';
 
     return new Promise((resolve, reject) => {
       if (!this.audio) {
@@ -194,15 +206,20 @@ class AudioEngine {
       audio.addEventListener('seeked', onSeeked);
       audio.currentTime = time;
 
-      // Fallback timeout in case seeked doesn't fire (shouldn't happen)
+      // Fallback timeout - Safari on older iPhones may swallow seeked event
       setTimeout(() => {
         audio.removeEventListener('seeked', onSeeked);
         if (audio.paused) {
           audio.play();
         }
         resolve();
-      }, 300);
+      }, AudioEngine.SEEK_FALLBACK_MS);
     });
+  }
+
+  // Check if running on mobile device
+  isMobile(): boolean {
+    return isMobile();
   }
 
   setSpeed(speed: PlaybackSpeed): void {
