@@ -288,3 +288,19 @@ body {
 .logo-pulse {
   animation: logo-pulse 4s ease-in-out infinite;
 }
+
+/* Floating Menu Animation */
+@keyframes menu-appear {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -90%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%);
+  }
+}
+
+.animate-menu-appear {
+  animation: menu-appear 0.15s ease-out forwards;
+}

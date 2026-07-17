@@ -34,8 +34,9 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
 
   // Edit mode states
   const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedSegments, setSelectedSegments] = useState<number[]>([]);
+  const [pendingMergeSegment, setPendingMergeSegment] = useState<Segment | null>(null);
   const [splitModalSegment, setSplitModalSegment] = useState<Segment | null>(null);
+  const [splitHoverIndex, setSplitHoverIndex] = useState<number | null>(null);
   const [localTranscript, setLocalTranscript] = useState<Segment[]>(currentAudio?.transcript ?? []);
 
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -117,7 +118,7 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
   const handleClose = useCallback(() => {
     // Exit edit mode when closing
     setIsEditMode(false);
-    setSelectedSegments([]);
+    setPendingMergeSegment(null);
     setSplitModalSegment(null);
     // Keep loopSegmentId - audioEngine loop should persist while playing
 
@@ -292,42 +293,39 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
       }
       return newEditMode;
     });
-    setSelectedSegments([]);
+    setPendingMergeSegment(null);
     setSplitModalSegment(null);
   }, [localIsPlaying, playerStore]);
 
   const handleEditSegmentClick = useCallback((segment: Segment) => {
-    if (!isEditMode) return;
+    if (!isEditMode || !pendingMergeSegment || !currentAudio) return;
 
-    setSelectedSegments(prev => {
-      if (prev.includes(segment.id)) {
-        return prev.filter(id => id !== segment.id);
-      }
-      // Only allow selecting adjacent segments
-      if (prev.length === 0) {
-        return [segment.id];
-      }
-      const sorted = [...prev].sort((a, b) => a - b);
-      const min = sorted[0];
-      const max = sorted[sorted.length - 1];
-      if (segment.id === min - 1 || segment.id === max + 1) {
-        return [...prev, segment.id];
-      }
-      // Start new selection
-      return [segment.id];
-    });
-  }, [isEditMode]);
+    // Check if clicked segment is adjacent to pendingMergeSegment
+    const pendingIndex = localTranscript.findIndex(s => s.id === pendingMergeSegment.id);
+    const clickedIndex = localTranscript.findIndex(s => s.id === segment.id);
 
-  const handleMerge = useCallback(async () => {
-    if (!currentAudio || selectedSegments.length < 2) return;
-    const newTranscript = await mergeSegments(currentAudio.id, selectedSegments);
-    if (newTranscript) {
-      setLocalTranscript(newTranscript);
-      playerStore.updateCurrentTranscript(newTranscript);
-      setSelectedSegments([]);
-      showToast('Segments merged', 'success');
+    if (Math.abs(pendingIndex - clickedIndex) === 1) {
+      // Adjacent - perform merge
+      const segmentIds = [pendingMergeSegment.id, segment.id];
+      mergeSegments(currentAudio.id, segmentIds).then(newTranscript => {
+        if (newTranscript) {
+          setLocalTranscript(newTranscript);
+          playerStore.updateCurrentTranscript(newTranscript);
+          showToast('Đã gộp thành công', 'success');
+        }
+      });
+      setPendingMergeSegment(null);
+    } else {
+      // Not adjacent - show error
+      showToast('Chỉ có thể gộp các đoạn nằm cạnh nhau', 'error');
+      setPendingMergeSegment(null);
     }
-  }, [currentAudio, selectedSegments, showToast, playerStore]);
+  }, [isEditMode, pendingMergeSegment, currentAudio, localTranscript, playerStore, showToast]);
+
+  const handleMergeStart = useCallback((segment: Segment) => {
+    setPendingMergeSegment(segment);
+    showToast('Chạm vào đoạn liền kề để gộp', 'info');
+  }, [showToast]);
 
   const handleSplitOpen = useCallback((segment: Segment) => {
     setSplitModalSegment(segment);
@@ -350,7 +348,7 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
     if (restored) {
       setLocalTranscript(restored);
       playerStore.updateCurrentTranscript(restored);
-      setSelectedSegments([]);
+      setPendingMergeSegment(null);
       showToast('Transcript restored', 'success');
     } else {
       showToast('No changes to restore', 'info');
@@ -420,10 +418,13 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
           currentSegmentIndex={localSegmentIndex}
           loopMode={loopMode}
           loopSegmentId={loopSegmentId}
-          onSegmentClick={isEditMode ? handleEditSegmentClick : handleSegmentClick}
+          onSegmentClick={pendingMergeSegment ? handleEditSegmentClick : handleSegmentClick}
           isEditMode={isEditMode}
-          selectedSegments={selectedSegments}
-          onLongPress={isEditMode ? handleSplitOpen : undefined}
+          selectedSegments={pendingMergeSegment ? [pendingMergeSegment.id] : []}
+          pendingMergeSegmentId={pendingMergeSegment?.id}
+          onSplit={handleSplitOpen}
+          onMerge={handleMergeStart}
+          onCancelMerge={() => setPendingMergeSegment(null)}
         />
 
         {/* Edit Mode Action Bar */}
@@ -433,17 +434,17 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
               onClick={handleRestore}
               className="px-4 py-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-base)]"
             >
-              Restore All
+              Khôi phục
             </button>
             <span className="text-sm text-[var(--color-text-muted)]">
-              {selectedSegments.length > 0 ? `${selectedSegments.length} selected` : 'Tap to select'}
+              {pendingMergeSegment ? 'Chọn đoạn liền kề để gộp' : 'Chạm vào đoạn để chỉnh sửa'}
             </span>
             <button
-              onClick={handleMerge}
-              disabled={selectedSegments.length < 2}
-              className={`px-4 py-2 text-sm rounded-full ${selectedSegments.length >= 2 ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)]' : 'bg-[var(--color-surface-card)] text-[var(--color-text-muted)]'}`}
+              onClick={() => setPendingMergeSegment(null)}
+              disabled={!pendingMergeSegment}
+              className={`px-4 py-2 text-sm rounded-full ${pendingMergeSegment ? 'bg-[var(--color-error)] text-white' : 'bg-[var(--color-surface-card)] text-[var(--color-text-muted)]'}`}
             >
-              Merge
+              Hủy
             </button>
           </div>
         )}
@@ -475,9 +476,9 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
         {splitModalSegment && (
           <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10">
             <div className="bg-[var(--color-surface-container)] rounded-2xl p-4 mx-4 max-w-md w-full max-h-[60vh] overflow-y-auto">
-              <h3 className="text-lg font-bold text-[var(--color-text-base)] mb-2">Split segment</h3>
-              <p className="text-sm text-[var(--color-text-muted)] mb-4">Tap a word to split before it</p>
-              <div className="flex flex-wrap gap-2 mb-4">
+              <h3 className="text-lg font-bold text-[var(--color-text-base)] mb-2">Tách đoạn</h3>
+              <p className="text-sm text-[var(--color-text-muted)] mb-4">Chạm vào từ để tách trước nó</p>
+              <div className="flex flex-wrap items-center gap-1 mb-4">
                 {splitModalSegment.words.map((word, idx) => (
                   idx === 0 ? (
                     <span
@@ -487,21 +488,38 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
                       {word.text}
                     </span>
                   ) : (
-                    <button
-                      key={idx}
-                      onClick={() => handleSplitConfirm(idx)}
-                      className="px-3 py-1.5 text-[var(--color-text-base)] bg-[var(--color-primary)]/20 hover:bg-[var(--color-primary)]/40 active:bg-[var(--color-primary)] active:text-[var(--color-on-primary)] rounded-lg transition-colors"
-                    >
-                      {word.text}
-                    </button>
+                    <div key={idx} className="flex items-center">
+                      {/* Visual cut indicator - red dashed line */}
+                      <div
+                        className={`w-0.5 h-6 mx-0.5 transition-all ${
+                          splitHoverIndex === idx
+                            ? 'bg-red-500 border-l-2 border-dashed border-red-500'
+                            : 'bg-transparent'
+                        }`}
+                      />
+                      <button
+                        onClick={() => handleSplitConfirm(idx)}
+                        onMouseEnter={() => setSplitHoverIndex(idx)}
+                        onMouseLeave={() => setSplitHoverIndex(null)}
+                        onTouchStart={() => setSplitHoverIndex(idx)}
+                        onTouchEnd={() => setSplitHoverIndex(null)}
+                        className={`px-3 py-1.5 rounded-lg transition-colors ${
+                          splitHoverIndex === idx
+                            ? 'bg-red-500/30 text-[var(--color-text-base)] ring-2 ring-red-500'
+                            : 'text-[var(--color-text-base)] bg-[var(--color-primary)]/20 hover:bg-[var(--color-primary)]/40'
+                        }`}
+                      >
+                        {word.text}
+                      </button>
+                    </div>
                   )
                 ))}
               </div>
               <button
-                onClick={() => setSplitModalSegment(null)}
+                onClick={() => { setSplitModalSegment(null); setSplitHoverIndex(null); }}
                 className="w-full py-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-base)]"
               >
-                Cancel
+                Hủy
               </button>
             </div>
           </div>
