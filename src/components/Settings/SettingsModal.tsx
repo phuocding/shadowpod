@@ -24,6 +24,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
   const [keyStatus, setKeyStatus] = useState<KeyStatus>('idle');
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isApiKeyExpanded, setIsApiKeyExpanded] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDev = window.location.hostname === 'localhost';
@@ -247,7 +248,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             onClick={() => setIsApiKeyExpanded(!isApiKeyExpanded)}
             className="w-full flex items-center justify-between p-4"
           >
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-h-[24px]">
               <span className="text-sm font-semibold text-[var(--color-text-base)]">
                 Cấu hình Deepgram API cá nhân (BYOK)
               </span>
@@ -267,7 +268,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
             <Icon
               name={isApiKeyExpanded ? 'expand_less' : 'expand_more'}
               size={20}
-              className="text-[var(--color-text-muted)]"
+              className="text-[var(--color-text-muted)] flex-shrink-0"
             />
           </button>
 
@@ -280,8 +281,14 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   type={showKey ? 'text' : 'password'}
                   value={inputKey}
                   onChange={(e) => handleKeyChange(e.target.value)}
-                  onBlur={handleKeyBlur}
-                  onFocus={handleInputFocus}
+                  onBlur={() => {
+                    setIsInputFocused(false);
+                    handleKeyBlur();
+                  }}
+                  onFocus={(e) => {
+                    setIsInputFocused(true);
+                    handleInputFocus(e);
+                  }}
                   placeholder="Dán API key vào đây..."
                   disabled={keyStatus === 'validating'}
                   className={`w-full px-4 py-3 pr-24 bg-[var(--color-surface-dark)] border rounded-xl text-[var(--color-text-base)] placeholder:text-[var(--color-text-muted)] focus:outline-none transition-all ${
@@ -296,10 +303,7 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                   {keyStatus === 'validating' && (
                     <Icon name="progress_activity" size={18} className="animate-spin text-[var(--color-text-muted)]" />
                   )}
-                  {keyStatus === 'valid' && inputKey && (
-                    <Icon name="check_circle" size={18} className="text-emerald-400" />
-                  )}
-                  {inputKey && keyStatus !== 'validating' && (
+                  {inputKey && keyStatus !== 'validating' && isInputFocused && (
                     <button
                       type="button"
                       onClick={handleClearKey}
@@ -319,26 +323,28 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               </div>
 
               {keyStatus === 'valid' && inputKey && (
-                <p className="text-xs text-emerald-400 flex items-center gap-1">
+                <p className="text-xs text-emerald-400 flex items-center gap-1 mt-4">
                   <Icon name="check" size={14} />
                   Đã tự động lưu và xác thực thành công
                 </p>
               )}
 
               {validationError && (
-                <p className="text-xs text-red-400 flex items-center gap-1">
+                <p className="text-xs text-red-400 flex items-center gap-1 mt-4">
                   <Icon name="warning" size={14} />
                   {validationError}
                 </p>
               )}
 
-              <p className="text-xs text-[var(--color-text-muted)]">
-                Lấy key miễn phí tại{' '}
-                <a href="https://deepgram.com" target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline">
-                  deepgram.com
-                </a>
-                {' '}— 12,000 phút/năm miễn phí
-              </p>
+              {keyStatus !== 'valid' && (
+                <p className="text-xs text-[var(--color-text-muted)] mt-3">
+                  Lấy key miễn phí tại{' '}
+                  <a href="https://deepgram.com" target="_blank" rel="noopener noreferrer" className="text-[var(--color-primary)] hover:underline">
+                    deepgram.com
+                  </a>
+                  {' '}— 12,000 phút/năm miễn phí
+                </p>
+              )}
             </div>
           </div>
         </div>
