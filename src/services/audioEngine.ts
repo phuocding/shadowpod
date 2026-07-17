@@ -124,9 +124,18 @@ class AudioEngine {
   private startTimeUpdateInterval(): void {
     this.stopTimeUpdateInterval();
     this.timeUpdateInterval = window.setInterval(() => {
-      if (this.howl && this.howl.playing()) {
+      if (this.howl) {
         const currentTime = this.howl.seek() as number;
-        this.onTimeUpdate?.(currentTime);
+        const duration = this.howl.duration();
+
+        if (this.howl.playing()) {
+          this.onTimeUpdate?.(currentTime);
+        }
+
+        // Check if audio ended (backup for onend not firing)
+        if (!this.howl.playing() && currentTime >= duration - 0.1 && duration > 0) {
+          this.onEnded?.();
+        }
       }
     }, AudioEngine.TIME_UPDATE_INTERVAL_MS);
   }
@@ -166,7 +175,7 @@ class AudioEngine {
     }
   }
 
-  // Howler handles buffering internally - seek is reliable
+  // Seek and play with mobile buffer delay
   seekAndPlay(time: number): Promise<void> {
     return new Promise((resolve) => {
       if (!this.howl) {
@@ -185,15 +194,19 @@ class AudioEngine {
         return;
       }
 
-      // Stop current playback to prevent overlapping sounds
-      this.howl.stop();
+      // Pause instead of stop (keeps sound alive for better seeking)
+      this.howl.pause();
 
-      // Seek and play - Howler handles this reliably
+      // Seek to target time
       this.howl.seek(time);
-      this.howl.play();
 
-      // Small delay to ensure seek completes before resolving
-      setTimeout(resolve, 20);
+      // Wait for mobile buffer before playing
+      setTimeout(() => {
+        if (this.howl && !this.howl.playing()) {
+          this.howl.play();
+        }
+        resolve();
+      }, isMobile() ? 150 : 20);
     });
   }
 
