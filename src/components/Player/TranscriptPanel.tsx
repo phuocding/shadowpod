@@ -130,8 +130,8 @@ export function TranscriptPanel({
       )}
 
       {segments.map((segment, index) => {
-        const isMergeTarget = pendingMergeSegmentId && (segment.id === prevId || segment.id === nextId);
-        const isDimmed = pendingMergeSegmentId && segment.id !== pendingMergeSegmentId && !isMergeTarget;
+        const isMergeTarget = (pendingMergeSegmentId != null) && (segment.id === prevId || segment.id === nextId);
+        const isDimmed = (pendingMergeSegmentId != null) && segment.id !== pendingMergeSegmentId && !isMergeTarget;
 
         return (
           <div

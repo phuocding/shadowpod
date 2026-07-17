@@ -14,9 +14,9 @@ export function MiniPlayer({ onOpenSheet }: MiniPlayerProps) {
   const { currentAudio, isPlaying, currentTime, currentSegmentIndex, toggle, stop } = usePlayerStore();
   const { loopMode, playbackSpeed, setLoopMode, setPlaybackSpeed } = useSettingsStore();
 
-  // Hide MiniPlayer on PlayerView route
-  const isOnPlayerRoute = location.pathname.startsWith('/play/');
-  if (!currentAudio || isOnPlayerRoute) return null;
+  // Hide MiniPlayer on PlayerView and Upload routes
+  const shouldHide = location.pathname.startsWith('/play/') || location.pathname === '/upload';
+  if (!currentAudio || shouldHide) return null;
 
   const progress = currentAudio.duration ? (currentTime / currentAudio.duration) * 100 : 0;
 
