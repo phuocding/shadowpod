@@ -1,6 +1,8 @@
 import { useLocation } from 'react-router-dom';
 import { Icon } from './ui/Icon';
 import { usePlayerStore } from '../stores/playerStore';
+import { useSettingsStore } from '../stores/settingsStore';
+import { audioEngine } from '../services/audioEngine';
 import { formatTime } from '../utils/formatTime';
 
 interface MiniPlayerProps {
@@ -9,7 +11,8 @@ interface MiniPlayerProps {
 
 export function MiniPlayer({ onOpenSheet }: MiniPlayerProps) {
   const location = useLocation();
-  const { currentAudio, isPlaying, currentTime, toggle, prevTrack, nextTrack, toggleCurrentFavorite, stop } = usePlayerStore();
+  const { currentAudio, isPlaying, currentTime, currentSegmentIndex, toggle, stop } = usePlayerStore();
+  const { loopMode, playbackSpeed, setLoopMode, setPlaybackSpeed } = useSettingsStore();
 
   // Hide MiniPlayer on PlayerView route
   const isOnPlayerRoute = location.pathname.startsWith('/play/');
@@ -56,30 +59,57 @@ export function MiniPlayer({ onOpenSheet }: MiniPlayerProps) {
 
           {/* Controls */}
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            {/* Speed Toggle */}
             <button
-              onClick={() => toggleCurrentFavorite()}
-              className={`p-2 transition-colors ${currentAudio.isFavorite ? 'text-[var(--color-negative)]' : 'text-[var(--color-text-base)]'}`}
+              onClick={() => {
+                const newSpeed = playbackSpeed === 'default' ? 'slow' : 'default';
+                setPlaybackSpeed(newSpeed);
+                audioEngine.setSpeed(newSpeed);
+              }}
+              className={`w-10 h-10 rounded-full text-xs font-bold transition-colors ${
+                playbackSpeed === 'slow'
+                  ? 'text-[var(--color-primary)]'
+                  : 'text-[var(--color-text-muted)]'
+              }`}
             >
-              <Icon name="favorite" filled={currentAudio.isFavorite} size={20} />
+              {playbackSpeed === 'slow' ? '0.75x' : '1x'}
             </button>
+            {/* Loop Toggle: none → all → sentence */}
             <button
-              onClick={() => prevTrack()}
-              className="p-2 text-[var(--color-text-base)] transition-colors"
+              onClick={() => {
+                const modes = ['none', 'all', 'sentence'] as const;
+                const currentIndex = modes.indexOf(loopMode as typeof modes[number]);
+                const nextMode = modes[(currentIndex + 1) % modes.length];
+                setLoopMode(nextMode);
+                if (nextMode === 'sentence' && currentAudio?.transcript) {
+                  const segment = currentAudio.transcript[currentSegmentIndex];
+                  if (segment) {
+                    audioEngine.setLoop(segment.startTime, segment.endTime);
+                  }
+                } else if (nextMode === 'all') {
+                  audioEngine.setLoop(null, null);
+                  audioEngine.setLoopAll(true);
+                } else {
+                  audioEngine.setLoop(null, null);
+                  audioEngine.setLoopAll(false);
+                }
+              }}
+              className={`p-2 rounded-full transition-colors ${
+                loopMode !== 'none'
+                  ? 'text-[var(--color-primary)]'
+                  : 'text-[var(--color-text-muted)]'
+              }`}
             >
-              <Icon name="skip_previous" size={24} />
+              <Icon name={loopMode === 'sentence' ? 'repeat_one' : 'repeat'} filled={loopMode !== 'none'} size={22} />
             </button>
+            {/* Play/Pause */}
             <button
               onClick={toggle}
               className="p-1 text-[var(--color-primary)]"
             >
               <Icon name={isPlaying ? 'pause' : 'play_arrow'} filled size={32} />
             </button>
-            <button
-              onClick={() => nextTrack()}
-              className="p-2 text-[var(--color-text-base)] transition-colors"
-            >
-              <Icon name="skip_next" size={24} />
-            </button>
+            {/* Close */}
             <button
               onClick={stop}
               className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-base)] transition-colors"

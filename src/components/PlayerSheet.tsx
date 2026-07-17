@@ -107,19 +107,14 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
     setSelectedSegments([]);
     setSplitModalSegment(null);
 
-    // Reset playback settings to defaults
-    setLoopMode('none');
-    setPlaybackSpeed('default');
-    audioEngine.setLoop(null, null);
-    audioEngine.setLoopAll(false);
-    audioEngine.setSpeed('default');
+    // Keep playback settings - they sync with MiniPlayer via settingsStore
 
     setIsClosing(true);
     setTimeout(() => {
       setIsClosing(false);
       onClose();
     }, 300);
-  }, [onClose, setLoopMode, setPlaybackSpeed]);
+  }, [onClose]);
 
   // Drag to dismiss handlers
   const handleDragStart = useCallback((clientY: number) => {
