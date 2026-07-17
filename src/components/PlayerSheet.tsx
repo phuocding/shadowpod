@@ -217,14 +217,17 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
   }, [playerStore]);
 
   const handleSegmentClick = useCallback((segment: Segment) => {
-    audioEngine.seek(segment.startTime);
     if (loopMode === 'sentence') {
       setLoopSegmentId(segment.id);
     }
     if (!localIsPlaying) {
-      audioEngine.play();
+      // Use seekAndPlay for mobile compatibility - waits for seek to complete
+      audioEngine.seekAndPlay(segment.startTime);
       playerStore.play();
       setLocalIsPlaying(true);
+    } else {
+      // Already playing - just seek
+      audioEngine.seek(segment.startTime);
     }
   }, [loopMode, localIsPlaying, playerStore]);
 

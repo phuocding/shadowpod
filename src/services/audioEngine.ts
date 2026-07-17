@@ -167,6 +167,44 @@ class AudioEngine {
     }
   }
 
+  // Seek and wait for completion before playing - fixes mobile audio delay
+  seekAndPlay(time: number): Promise<void> {
+    return new Promise((resolve) => {
+      if (!this.audio) {
+        resolve();
+        return;
+      }
+
+      const audio = this.audio;
+
+      // If already at the target time (within 0.1s), just play
+      if (Math.abs(audio.currentTime - time) < 0.1) {
+        audio.play();
+        resolve();
+        return;
+      }
+
+      // Wait for seeked event before playing
+      const onSeeked = () => {
+        audio.removeEventListener('seeked', onSeeked);
+        audio.play();
+        resolve();
+      };
+
+      audio.addEventListener('seeked', onSeeked);
+      audio.currentTime = time;
+
+      // Fallback timeout in case seeked doesn't fire (shouldn't happen)
+      setTimeout(() => {
+        audio.removeEventListener('seeked', onSeeked);
+        if (audio.paused) {
+          audio.play();
+        }
+        resolve();
+      }, 300);
+    });
+  }
+
   setSpeed(speed: PlaybackSpeed): void {
     if (this.audio) {
       this.audio.playbackRate = speed === 'slow' ? 0.75 : 1.0;
