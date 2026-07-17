@@ -1,260 +1,210 @@
+import { Howl } from 'howler';
+import type { HowlOptions } from 'howler';
 import type { PlaybackSpeed } from '../types';
 
 type TimeUpdateCallback = (currentTime: number) => void;
 type EndedCallback = () => void;
 
-// Platform detection for mobile-specific audio handling
+// Platform detection for mobile-specific handling
 const isMobile = (): boolean => {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
     navigator.userAgent
   );
 };
 
+// Convert MIME type to Howler format string
+const mimeToFormat = (mimeType: string): string[] => {
+  const map: Record<string, string> = {
+    'audio/mpeg': 'mp3',
+    'audio/mp3': 'mp3',
+    'audio/mp4': 'm4a',
+    'audio/x-m4a': 'm4a',
+    'audio/aac': 'aac',
+    'audio/wav': 'wav',
+    'audio/wave': 'wav',
+    'audio/x-wav': 'wav',
+    'audio/webm': 'webm',
+    'audio/ogg': 'ogg',
+    'audio/flac': 'flac',
+  };
+  const format = map[mimeType.toLowerCase()];
+  return format ? [format] : ['mp3', 'm4a', 'wav', 'webm', 'ogg'];
+};
+
 class AudioEngine {
-  private audio: HTMLAudioElement | null = null;
+  private howl: Howl | null = null;
   private onTimeUpdate: TimeUpdateCallback | null = null;
   private onEnded: EndedCallback | null = null;
   private loopStart: number | null = null;
   private loopEnd: number | null = null;
   private currentBlobUrl: string | null = null;
   private loadId: number = 0;
+  private timeUpdateInterval: number | null = null;
   private loopCheckInterval: number | null = null;
-  private static readonly LOOP_CHECK_INTERVAL_MS = 50;
-  private static readonly LOOP_BUFFER_MS = 0.15; // 150ms buffer for mobile compatibility
+  private currentSpeed: number = 1.0;
+
+  private static readonly TIME_UPDATE_INTERVAL_MS = 50;
+  private static readonly LOOP_CHECK_INTERVAL_MS = 30;
+  private static readonly LOOP_BUFFER_MS = 0.1; // 100ms buffer
 
   async load(blob: Blob): Promise<number> {
-    // Validate blob
     if (!blob || blob.size === 0) {
       throw new Error('Invalid audio blob: empty or null');
     }
 
-    // Increment loadId to cancel any in-progress load
     const currentLoadId = ++this.loadId;
 
-    // Stop and cleanup existing audio first
-    if (this.audio) {
-      this.audio.pause();
-      this.audio.onloadedmetadata = null;
-      this.audio.onerror = null;
-      this.audio.ontimeupdate = null;
-      this.audio.onended = null;
-      this.audio.src = '';
-      this.audio = null;
-    }
+    // Cleanup existing audio
+    this.cleanup();
 
-    // Revoke previous blob URL to prevent memory leaks
-    if (this.currentBlobUrl) {
-      URL.revokeObjectURL(this.currentBlobUrl);
-      this.currentBlobUrl = null;
-    }
-
+    // Create blob URL
     this.currentBlobUrl = URL.createObjectURL(blob);
-    this.audio = new Audio(this.currentBlobUrl);
-    // Preload full audio for better seeking performance on mobile
-    this.audio.preload = 'auto';
 
-    return new Promise((resolve, reject) => {
-      if (!this.audio) {
-        return reject(new Error('Audio not initialized'));
-      }
+    // Get format from blob MIME type
+    const format = mimeToFormat(blob.type);
 
-      const audio = this.audio;
-
-      audio.onloadedmetadata = () => {
-        // Ignore if this load was superseded by a newer one
-        if (currentLoadId !== this.loadId) {
-          console.log('AudioEngine: Load superseded, ignoring stale loadedmetadata');
-          return;
-        }
-        resolve(audio.duration);
-      };
-
-      audio.onerror = (e) => {
-        // Ignore if this load was superseded by a newer one
-        if (currentLoadId !== this.loadId) {
-          console.log('AudioEngine: Load superseded, ignoring stale error');
-          return;
-        }
-        const mediaError = audio.error;
-        const errorMsg = mediaError
-          ? `Failed to load audio: ${mediaError.message} (code: ${mediaError.code})`
-          : 'Failed to load audio: unknown error';
-        console.error('AudioEngine error:', errorMsg, e);
-        reject(new Error(errorMsg));
-      };
-
-      audio.ontimeupdate = () => {
-        if (currentLoadId !== this.loadId) return;
-        this.onTimeUpdate?.(audio.currentTime);
-      };
-
-      audio.onended = () => {
-        if (currentLoadId !== this.loadId) return;
-        this.onEnded?.();
-      };
-    });
+    return this.loadAudio(this.currentBlobUrl, currentLoadId, format);
   }
 
   async loadFromUrl(url: string): Promise<number> {
-    // Increment loadId to cancel any in-progress load
     const currentLoadId = ++this.loadId;
 
-    // Stop and cleanup existing audio first
-    if (this.audio) {
-      this.audio.pause();
-      this.audio.onloadedmetadata = null;
-      this.audio.onerror = null;
-      this.audio.ontimeupdate = null;
-      this.audio.onended = null;
-      this.audio.src = '';
-      this.audio = null;
-    }
+    // Cleanup existing audio
+    this.cleanup();
 
-    // Revoke previous blob URL if exists
-    if (this.currentBlobUrl) {
-      URL.revokeObjectURL(this.currentBlobUrl);
-      this.currentBlobUrl = null;
-    }
+    return this.loadAudio(url, currentLoadId);
+  }
 
-    this.audio = new Audio(url);
-    // Preload full audio for better seeking performance on mobile
-    this.audio.preload = 'auto';
-
+  private loadAudio(src: string, currentLoadId: number, format?: string[]): Promise<number> {
     return new Promise((resolve, reject) => {
-      if (!this.audio) {
-        return reject(new Error('Audio not initialized'));
+      const howlConfig: HowlOptions = {
+        src: [src],
+        html5: false, // Use Web Audio API for better seeking
+        preload: true,
+        onload: () => {
+          if (currentLoadId !== this.loadId) {
+            console.log('AudioEngine: Load superseded, ignoring');
+            return;
+          }
+          const duration = this.howl?.duration() ?? 0;
+          this.startTimeUpdateInterval();
+          resolve(duration);
+        },
+        onloaderror: (_id, error) => {
+          if (currentLoadId !== this.loadId) {
+            return;
+          }
+          console.error('AudioEngine Howler error:', error);
+          reject(new Error(`Failed to load audio: ${error}`));
+        },
+        onend: () => {
+          if (currentLoadId !== this.loadId) return;
+          this.onEnded?.();
+        },
+        onplayerror: (_id, error) => {
+          console.error('AudioEngine play error:', error);
+          // Howler auto-unlocks on mobile, retry play
+          if (this.howl) {
+            this.howl.once('unlock', () => {
+              this.howl?.play();
+            });
+          }
+        },
+      };
+
+      // Add format if provided (needed for blob URLs without extension)
+      if (format) {
+        howlConfig.format = format;
       }
 
-      const audio = this.audio;
-
-      audio.onloadedmetadata = () => {
-        if (currentLoadId !== this.loadId) {
-          return;
-        }
-        resolve(audio.duration);
-      };
-
-      audio.onerror = (e) => {
-        if (currentLoadId !== this.loadId) {
-          return;
-        }
-        const mediaError = audio.error;
-        const errorMsg = mediaError
-          ? `Failed to load audio: ${mediaError.message} (code: ${mediaError.code})`
-          : 'Failed to load audio: unknown error';
-        console.error('AudioEngine error:', errorMsg, e);
-        reject(new Error(errorMsg));
-      };
-
-      audio.ontimeupdate = () => {
-        if (currentLoadId !== this.loadId) return;
-        this.onTimeUpdate?.(audio.currentTime);
-      };
-
-      audio.onended = () => {
-        if (currentLoadId !== this.loadId) return;
-        this.onEnded?.();
-      };
+      this.howl = new Howl(howlConfig);
     });
+  }
+
+  private startTimeUpdateInterval(): void {
+    this.stopTimeUpdateInterval();
+    this.timeUpdateInterval = window.setInterval(() => {
+      if (this.howl && this.howl.playing()) {
+        const currentTime = this.howl.seek() as number;
+        this.onTimeUpdate?.(currentTime);
+      }
+    }, AudioEngine.TIME_UPDATE_INTERVAL_MS);
+  }
+
+  private stopTimeUpdateInterval(): void {
+    if (this.timeUpdateInterval !== null) {
+      clearInterval(this.timeUpdateInterval);
+      this.timeUpdateInterval = null;
+    }
   }
 
   play(): void {
-    if (this.audio) {
-      // If audio has ended, seek to beginning first
-      if (this.audio.ended) {
-        this.audio.currentTime = 0;
-      }
-      this.audio.play();
+    if (!this.howl) return;
+
+    // If already playing, don't create new instance
+    if (this.howl.playing()) return;
+
+    // If audio has ended, seek to beginning first
+    const duration = this.howl.duration();
+    const currentTime = this.howl.seek() as number;
+    if (currentTime >= duration - 0.1) {
+      this.howl.seek(0);
     }
+
+    this.howl.play();
   }
 
   pause(): void {
-    this.audio?.pause();
+    this.howl?.pause();
   }
 
   seek(time: number): void {
-    if (this.audio) {
-      this.audio.currentTime = time;
+    if (this.howl) {
+      this.howl.seek(time);
+      // Trigger immediate time update for UI sync
+      this.onTimeUpdate?.(time);
     }
   }
 
-  // Seek and wait for completion before playing - fixes mobile audio delay
+  // Howler handles buffering internally - seek is reliable
   seekAndPlay(time: number): Promise<void> {
     return new Promise((resolve) => {
-      if (!this.audio) {
+      if (!this.howl) {
         resolve();
         return;
       }
 
-      const audio = this.audio;
+      const currentTime = this.howl.seek() as number;
 
-      // If already at the target time (within 0.1s), just play
-      if (Math.abs(audio.currentTime - time) < 0.1) {
-        audio.play();
+      // If already at target time, just play
+      if (Math.abs(currentTime - time) < 0.1) {
+        if (!this.howl.playing()) {
+          this.howl.play();
+        }
         resolve();
         return;
       }
 
-      // Helper to check if time is within buffered ranges
-      const isTimeBuffered = (t: number): boolean => {
-        for (let i = 0; i < audio.buffered.length; i++) {
-          if (t >= audio.buffered.start(i) && t <= audio.buffered.end(i)) {
-            return true;
-          }
-        }
-        return false;
-      };
+      // Stop current playback to prevent overlapping sounds
+      this.howl.stop();
 
-      // Cleanup function
-      let cleaned = false;
-      const cleanup = () => {
-        if (cleaned) return;
-        cleaned = true;
-        audio.removeEventListener('seeked', onSeeked);
-        audio.removeEventListener('canplay', onCanPlay);
-      };
+      // Seek and play - Howler handles this reliably
+      this.howl.seek(time);
+      this.howl.play();
 
-      // Called when seek completes
-      const onSeeked = () => {
-        // Check if data is buffered at this position
-        if (isTimeBuffered(time) || audio.readyState >= 3) {
-          cleanup();
-          audio.play();
-          resolve();
-        }
-        // If not buffered, wait for canplay event
-      };
-
-      // Called when enough data is buffered to play
-      const onCanPlay = () => {
-        cleanup();
-        audio.play();
-        resolve();
-      };
-
-      audio.addEventListener('seeked', onSeeked);
-      audio.addEventListener('canplay', onCanPlay);
-      audio.currentTime = time;
-
-      // Fallback timeout - ensures we don't hang forever
-      setTimeout(() => {
-        cleanup();
-        if (audio.paused) {
-          audio.play();
-        }
-        resolve();
-      }, 200); // Increased to 200ms for iOS WebKit
+      // Small delay to ensure seek completes before resolving
+      setTimeout(resolve, 20);
     });
   }
 
-  // Check if running on mobile device
   isMobile(): boolean {
     return isMobile();
   }
 
   setSpeed(speed: PlaybackSpeed): void {
-    if (this.audio) {
-      this.audio.playbackRate = speed === 'slow' ? 0.75 : 1.0;
+    this.currentSpeed = speed === 'slow' ? 0.75 : 1.0;
+    if (this.howl) {
+      this.howl.rate(this.currentSpeed);
     }
   }
 
@@ -262,43 +212,39 @@ class AudioEngine {
     this.loopStart = start;
     this.loopEnd = end;
 
-    // Clear existing loop check interval
+    // Clear loop-all mode
+    if (this.howl) {
+      this.howl.loop(false);
+    }
+
     this.stopLoopCheck();
 
-    if (this.audio && start !== null && end !== null) {
-      // Start precise loop checking
+    if (start !== null && end !== null) {
       this.startLoopCheck();
-    } else if (this.audio) {
-      this.audio.loop = false;
     }
   }
 
   setLoopAll(enabled: boolean): void {
-    // Clear segment loop when enabling all loop
     this.stopLoopCheck();
     this.loopStart = null;
     this.loopEnd = null;
 
-    if (this.audio) {
-      this.audio.loop = enabled;
+    if (this.howl) {
+      this.howl.loop(enabled);
     }
   }
 
   private startLoopCheck(): void {
     this.loopCheckInterval = window.setInterval(() => {
-      if (!this.audio || this.loopEnd === null || this.loopStart === null) return;
-      if (this.audio.paused) return; // Skip if already paused
+      if (!this.howl || this.loopEnd === null || this.loopStart === null) return;
+      if (!this.howl.playing()) return;
 
-      // Trigger loop slightly before end to account for seek delay
+      const currentTime = this.howl.seek() as number;
       const triggerPoint = this.loopEnd - AudioEngine.LOOP_BUFFER_MS;
-      if (this.audio.currentTime >= triggerPoint) {
-        // Pause -> seek -> play for clean transition on mobile
-        const wasPlaying = !this.audio.paused;
-        this.audio.pause();
-        this.audio.currentTime = this.loopStart;
-        if (wasPlaying) {
-          this.audio.play();
-        }
+
+      if (currentTime >= triggerPoint) {
+        // Seek back to start - Howler handles this smoothly
+        this.howl.seek(this.loopStart);
       }
     }, AudioEngine.LOOP_CHECK_INTERVAL_MS);
   }
@@ -311,15 +257,17 @@ class AudioEngine {
   }
 
   getCurrentTime(): number {
-    return this.audio?.currentTime ?? 0;
+    if (!this.howl) return 0;
+    const time = this.howl.seek();
+    return typeof time === 'number' ? time : 0;
   }
 
   getDuration(): number {
-    return this.audio?.duration ?? 0;
+    return this.howl?.duration() ?? 0;
   }
 
   isPlaying(): boolean {
-    return this.audio ? !this.audio.paused : false;
+    return this.howl?.playing() ?? false;
   }
 
   setOnTimeUpdate(callback: TimeUpdateCallback | null): void {
@@ -330,23 +278,28 @@ class AudioEngine {
     this.onEnded = callback;
   }
 
-  destroy(): void {
+  private cleanup(): void {
+    this.stopTimeUpdateInterval();
     this.stopLoopCheck();
-    if (this.audio) {
-      this.audio.pause();
-      this.audio.removeAttribute('src');
-      this.audio.load();
-      this.audio = null;
+
+    if (this.howl) {
+      this.howl.unload();
+      this.howl = null;
     }
-    // Clean up blob URL to prevent memory leaks
+
     if (this.currentBlobUrl) {
       URL.revokeObjectURL(this.currentBlobUrl);
       this.currentBlobUrl = null;
     }
+  }
+
+  destroy(): void {
+    this.cleanup();
     this.onTimeUpdate = null;
     this.onEnded = null;
     this.loopStart = null;
     this.loopEnd = null;
+    this.currentSpeed = 1.0;
   }
 }
 

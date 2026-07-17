@@ -58,7 +58,7 @@ export function MiniPlayer({ onOpenSheet }: MiniPlayerProps) {
           </div>
 
           {/* Controls */}
-          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
             {/* Speed Toggle */}
             <button
               onClick={() => {
@@ -66,7 +66,7 @@ export function MiniPlayer({ onOpenSheet }: MiniPlayerProps) {
                 setPlaybackSpeed(newSpeed);
                 audioEngine.setSpeed(newSpeed);
               }}
-              className={`w-10 h-10 rounded-full text-xs font-bold transition-colors ${
+              className={`w-10 h-10 flex items-center justify-center text-sm font-semibold transition-colors ${
                 playbackSpeed === 'slow'
                   ? 'text-[var(--color-primary)]'
                   : 'text-[var(--color-text-muted)]'
@@ -94,7 +94,7 @@ export function MiniPlayer({ onOpenSheet }: MiniPlayerProps) {
                   audioEngine.setLoopAll(false);
                 }
               }}
-              className={`p-2 rounded-full transition-colors ${
+              className={`w-10 h-10 flex items-center justify-center transition-colors ${
                 loopMode !== 'none'
                   ? 'text-[var(--color-primary)]'
                   : 'text-[var(--color-text-muted)]'
@@ -105,14 +105,13 @@ export function MiniPlayer({ onOpenSheet }: MiniPlayerProps) {
             {/* Play/Pause */}
             <button
               onClick={toggle}
-              className="p-1 text-[var(--color-primary)]"
+              className="w-10 h-10 flex items-center justify-center text-[var(--color-primary)]"
             >
               <Icon name={isPlaying ? 'pause' : 'play_arrow'} filled size={32} />
             </button>
             {/* Close */}
             <button
               onClick={() => {
-                // Reset playback settings when stopping audio
                 setLoopMode('none');
                 setPlaybackSpeed('default');
                 audioEngine.setLoop(null, null);
@@ -120,7 +119,7 @@ export function MiniPlayer({ onOpenSheet }: MiniPlayerProps) {
                 audioEngine.setSpeed('default');
                 stop();
               }}
-              className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-base)] transition-colors"
+              className="w-10 h-10 flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-text-base)] transition-colors"
               title="Close"
             >
               <Icon name="close" size={20} />
