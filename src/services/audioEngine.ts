@@ -196,24 +196,55 @@ class AudioEngine {
         return;
       }
 
-      // Wait for seeked event before playing
-      const onSeeked = () => {
+      // Helper to check if time is within buffered ranges
+      const isTimeBuffered = (t: number): boolean => {
+        for (let i = 0; i < audio.buffered.length; i++) {
+          if (t >= audio.buffered.start(i) && t <= audio.buffered.end(i)) {
+            return true;
+          }
+        }
+        return false;
+      };
+
+      // Cleanup function
+      let cleaned = false;
+      const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
         audio.removeEventListener('seeked', onSeeked);
+        audio.removeEventListener('canplay', onCanPlay);
+      };
+
+      // Called when seek completes
+      const onSeeked = () => {
+        // Check if data is buffered at this position
+        if (isTimeBuffered(time) || audio.readyState >= 3) {
+          cleanup();
+          audio.play();
+          resolve();
+        }
+        // If not buffered, wait for canplay event
+      };
+
+      // Called when enough data is buffered to play
+      const onCanPlay = () => {
+        cleanup();
         audio.play();
         resolve();
       };
 
       audio.addEventListener('seeked', onSeeked);
+      audio.addEventListener('canplay', onCanPlay);
       audio.currentTime = time;
 
-      // Fallback timeout - Safari on older iPhones may swallow seeked event
+      // Fallback timeout - ensures we don't hang forever
       setTimeout(() => {
-        audio.removeEventListener('seeked', onSeeked);
+        cleanup();
         if (audio.paused) {
           audio.play();
         }
         resolve();
-      }, AudioEngine.SEEK_FALLBACK_MS);
+      }, 200); // Increased to 200ms for iOS WebKit
     });
   }
 
