@@ -269,6 +269,14 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
 
   const handleModeChange = useCallback((mode: 'shadow' | 'dictate') => {
     setPracticeMode(mode);
+
+    // Reset loop state when switching modes to prevent stale loop behavior
+    if (loopMode === 'sentence') {
+      setLoopMode('none');
+      setLoopSegmentId(undefined);
+      audioEngine.setLoop(null, null);
+    }
+
     if (mode === 'dictate' && onOpenDictation) {
       // Pause audio when switching to dictation
       if (localIsPlaying) {

@@ -19,6 +19,7 @@ type Step = 'select' | 'preview' | 'transcribing' | 'error';
 export function UploadFlow() {
   const navigate = useNavigate();
   const apiKey = useSettingsStore((s) => s.deepgramApiKey);
+  const setLoopMode = useSettingsStore((s) => s.setLoopMode);
   const loadAndPlay = usePlayerStore((s) => s.loadAndPlay);
   const setPendingSheetOpen = usePlayerStore((s) => s.setPendingSheetOpen);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
@@ -117,12 +118,14 @@ export function UploadFlow() {
       showToast('Transcribe xong!', 'success', {
         label: 'Mở',
         onClick: async () => {
+          setLoopMode('none'); // Reset loop mode for new audio
           await loadAndPlay(id, false);
           setPendingSheetOpen(true);
         },
       });
     } else {
       // No audio playing - auto-open player (good for first-time users)
+      setLoopMode('none'); // Reset loop mode for new audio
       await loadAndPlay(id, false);
       setPendingSheetOpen(true);
       navigate('/');

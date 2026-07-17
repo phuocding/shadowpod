@@ -37,7 +37,24 @@ export async function transcribe(
     }
 
     const data: DeepgramResponse = await response.json();
+
+    // DEBUG: Log raw Deepgram response
+    console.log('[Transcriber] Raw Deepgram response:', JSON.stringify(data, null, 2));
+
     const segments = parseDeepgramResponse(data);
+
+    // DEBUG: Log parsed segments with timing comparison
+    console.log('[Transcriber] Parsed segments:');
+    segments.forEach((seg, i) => {
+      const firstWord = seg.words[0];
+      const lastWord = seg.words[seg.words.length - 1];
+      console.log(`  Seg ${i}: "${seg.text.substring(0, 40)}..."`);
+      console.log(`    utterance: ${seg.startTime.toFixed(2)}s → ${seg.endTime.toFixed(2)}s`);
+      if (firstWord && lastWord) {
+        console.log(`    words[0]:  ${firstWord.startTime.toFixed(2)}s | words[-1]: ${lastWord.endTime.toFixed(2)}s`);
+        console.log(`    GAP start: ${(seg.startTime - firstWord.startTime).toFixed(2)}s | GAP end: ${(seg.endTime - lastWord.endTime).toFixed(2)}s`);
+      }
+    });
 
     return { segments };
   } catch (error) {
@@ -49,81 +66,53 @@ export async function transcribe(
 }
 
 function parseDeepgramResponse(data: DeepgramResponse): Segment[] {
-  const utterances = data.results?.utterances;
-  let segments: Segment[] = [];
+  // IMPORTANT: Always use channel words, NOT utterances
+  // Deepgram utterances may have normalized/different timestamps
+  // Channel words have accurate absolute timestamps matching the audio file
+  const channel = data.results?.channels?.[0];
+  const alternative = channel?.alternatives?.[0];
 
-  if (utterances && utterances.length > 0) {
-    segments = utterances.map((utterance, index) => ({
-      id: index,
-      text: utterance.transcript,
-      startTime: utterance.start,
-      endTime: utterance.end,
-      words: utterance.words.map((w) => ({
-        text: w.punctuated_word || w.word,
-        startTime: w.start,
-        endTime: w.end,
-        confidence: w.confidence,
-      })),
-    }));
-  } else {
-    // Fallback: parse from words if no utterances
-    const channel = data.results?.channels?.[0];
-    const alternative = channel?.alternatives?.[0];
+  if (!alternative?.words?.length) {
+    return [];
+  }
 
-    if (!alternative?.words?.length) {
-      return [];
-    }
+  const segments: Segment[] = [];
+  let currentSegment: Segment | null = null;
 
-    // Group words into sentences by punctuation
-    let currentSegment: Segment | null = null;
+  // Group words into sentences by punctuation
+  alternative.words.forEach((word, index) => {
+    const wordText = word.punctuated_word || word.word;
 
-    alternative.words.forEach((word, index) => {
-      const wordText = word.punctuated_word || word.word;
-
-      if (!currentSegment) {
-        currentSegment = {
-          id: segments.length,
-          text: wordText,
-          startTime: word.start,
-          endTime: word.end,
-          words: [{
-            text: wordText,
-            startTime: word.start,
-            endTime: word.end,
-            confidence: word.confidence,
-          }],
-        };
-      } else {
-        currentSegment.text += ' ' + wordText;
-        currentSegment.endTime = word.end;
-        currentSegment.words.push({
+    if (!currentSegment) {
+      currentSegment = {
+        id: segments.length,
+        text: wordText,
+        startTime: word.start,
+        endTime: word.end,
+        words: [{
           text: wordText,
           startTime: word.start,
           endTime: word.end,
           confidence: word.confidence,
-        });
-      }
-
-      // End segment on sentence-ending punctuation
-      if (wordText.match(/[.!?]$/) || index === alternative.words.length - 1) {
-        segments.push(currentSegment);
-        currentSegment = null;
-      }
-    });
-  }
-
-  // Normalize ALL segments by shifting timestamps if there's an initial offset
-  if (segments.length > 0 && segments[0].startTime > 0) {
-    const offset = segments[0].startTime;
-    segments.forEach((seg) => {
-      seg.startTime = Math.max(0, seg.startTime - offset);
-      seg.endTime = seg.endTime - offset;
-      seg.words.forEach((w) => {
-        w.startTime = Math.max(0, w.startTime - offset);
-        w.endTime = w.endTime - offset;
+        }],
+      };
+    } else {
+      currentSegment.text += ' ' + wordText;
+      currentSegment.endTime = word.end;
+      currentSegment.words.push({
+        text: wordText,
+        startTime: word.start,
+        endTime: word.end,
+        confidence: word.confidence,
       });
-    });
-  }
+    }
+
+    // End segment on sentence-ending punctuation
+    if (wordText.match(/[.!?]$/) || index === alternative.words.length - 1) {
+      segments.push(currentSegment);
+      currentSegment = null;
+    }
+  });
 
   return segments;
 }
