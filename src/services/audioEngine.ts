@@ -21,7 +21,6 @@ class AudioEngine {
   private loopCheckInterval: number | null = null;
   private static readonly LOOP_CHECK_INTERVAL_MS = 50;
   private static readonly LOOP_BUFFER_MS = 0.15; // 150ms buffer for mobile compatibility
-  private static readonly SEEK_FALLBACK_MS = 50; // Fallback timeout for seeked event
 
   async load(blob: Blob): Promise<number> {
     // Validate blob

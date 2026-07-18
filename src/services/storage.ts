@@ -10,6 +10,11 @@ db.version(1).stores({
   audioRecords: 'id, name, createdAt, lastPlayedAt',
 });
 
+// Clear all data (for testing/reset)
+export async function clearAllData(): Promise<void> {
+  await db.audioRecords.clear();
+}
+
 // Save audio with transcript
 export async function saveAudio(
   name: string,

@@ -7,6 +7,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { getLatestRelease, type GitHubRelease } from '../../services/githubRelease';
 import { handleInputFocus } from '../../utils/keyboardScroll';
 import { validateDeepgramKey } from '../../services/deepgramValidation';
+import { clearAllData } from '../../services/storage';
 
 type KeyStatus = 'idle' | 'validating' | 'valid' | 'invalid';
 
@@ -375,6 +376,24 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 Free
               </button>
             </div>
+          </div>
+        )}
+
+        {/* DEV ONLY: Clear All Data */}
+        {isDev && (
+          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl">
+            <p className="text-xs text-red-500 font-semibold mb-2">⚠️ DANGER ZONE</p>
+            <button
+              onClick={async () => {
+                if (confirm('Xóa tất cả audio đã upload? Hành động này không thể hoàn tác.')) {
+                  await clearAllData();
+                  window.location.reload();
+                }
+              }}
+              className="w-full py-2 px-3 rounded-lg text-xs font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
+            >
+              Clear All Data (IndexedDB)
+            </button>
           </div>
         )}
 
