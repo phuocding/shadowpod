@@ -15,16 +15,33 @@ const LEFT_ACTION_WIDTH = 80;   // Favorite button width
 const RIGHT_ACTION_WIDTH = 160; // Pin + Delete buttons width
 
 export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: AudioCardProps) {
-  const { loadAndPlay, toggle, currentAudio, isPlaying } = usePlayerStore();
+  const { loadAndPlay } = usePlayerStore();
   const [offsetX, setOffsetX] = useState(0);
+  const [showMenu, setShowMenu] = useState(false);
+  const [menuAnimating, setMenuAnimating] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const startOffsetX = useRef(0);
   const isHorizontalSwipe = useRef<boolean | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const isThisAudio = currentAudio?.id === audio.id;
-  const isCurrentlyPlaying = isThisAudio && isPlaying;
+  const isSwiping = Math.abs(offsetX) > 5;
+
+  // Animation logic for BottomSheet
+  const openMenu = () => {
+    setShowMenu(true);
+    requestAnimationFrame(() => {
+      setMenuVisible(true);
+      setMenuAnimating(true);
+    });
+  };
+
+  const closeMenu = () => {
+    setMenuAnimating(false);
+    setMenuVisible(false);
+    setTimeout(() => setShowMenu(false), 300);
+  };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -168,22 +185,103 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
             </button>
           </div>
 
-          {/* Favorite indicator - mobile only (shows always if favorited) */}
-          {audio.isFavorite && <Icon name="favorite" size={20} className="text-[#1ed760] mr-2 lg:hidden" filled />}
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (isRevealed) { resetSwipe(); return; }
-              if (isThisAudio) toggle();
-              else loadAndPlay(audio.id);
+          {/* Favorite indicator + 3-dot menu - HIDDEN when swiping */}
+          <div
+            className="flex items-center gap-1 lg:hidden"
+            style={{
+              opacity: isSwiping ? 0 : 1,
+              visibility: isSwiping ? 'hidden' : 'visible',
+              transition: 'opacity 0.1s ease',
             }}
-            className="text-[var(--color-text-base)] hover:text-[var(--color-primary)] transition-colors"
           >
-            <Icon name={isCurrentlyPlaying ? 'pause' : 'play_arrow'} filled size={28} />
-          </button>
+            {audio.isFavorite && (
+              <Icon name="favorite" size={20} className="text-[#1ed760]" filled />
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                openMenu();
+              }}
+              className="p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-base)] transition-colors"
+            >
+              <Icon name="more_horiz" size={24} />
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Context Menu BottomSheet - Below nav bubbles */}
+      {showMenu && (
+        <div
+          className="fixed inset-0 z-40 flex items-end"
+          onClick={closeMenu}
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50"
+            style={{
+              opacity: menuAnimating ? 1 : 0,
+              transition: 'opacity 0.3s ease-out',
+            }}
+          />
+
+          {/* Menu - Glassmorphism, sits below nav bubbles */}
+          <div
+            className="relative w-full rounded-t-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'rgba(25, 25, 25, 0.75)',
+              backdropFilter: 'blur(25px)',
+              WebkitBackdropFilter: 'blur(25px)',
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              paddingBottom: '84px',
+              transform: menuAnimating ? 'translateY(0)' : 'translateY(100%)',
+              transition: 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+            }}
+          >
+            {/* Header */}
+            <div className="px-4 py-3 border-b border-white/10">
+              <p className="text-sm font-medium text-white truncate">{audio.name}</p>
+              <p className="text-xs text-white/40 mt-0.5">{formatTime(audio.duration)}</p>
+            </div>
+
+            {/* Actions */}
+            <div className="py-2">
+              <button
+                onClick={() => { handleFavorite(); closeMenu(); }}
+                className="w-full flex items-center gap-4 px-4 py-3 text-white hover:bg-white/10 transition-colors"
+              >
+                <Icon name={audio.isFavorite ? "heart_minus" : "favorite"} size={24} className={audio.isFavorite ? "text-[#1ed760]" : ""} />
+                <span>{audio.isFavorite ? "Bỏ yêu thích" : "Yêu thích"}</span>
+              </button>
+              <button
+                onClick={() => { handlePin(); closeMenu(); }}
+                className="w-full flex items-center gap-4 px-4 py-3 text-white hover:bg-white/10 transition-colors"
+              >
+                <Icon name="keep" size={24} />
+                <span>Ghim bài học</span>
+              </button>
+              <button
+                onClick={() => { handleDelete(); closeMenu(); }}
+                className="w-full flex items-center gap-4 px-4 py-3 text-[#ff453a] hover:bg-white/10 transition-colors"
+              >
+                <Icon name="delete" size={24} className="text-[#ff453a]" />
+                <span>Xóa bài học</span>
+              </button>
+            </div>
+
+            {/* Cancel */}
+            <div className="border-t border-white/10">
+              <button
+                onClick={closeMenu}
+                className="w-full py-4 text-white font-semibold hover:bg-white/10 transition-colors"
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

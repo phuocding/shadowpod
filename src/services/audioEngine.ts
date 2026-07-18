@@ -19,6 +19,7 @@ class AudioEngine {
   private currentBlobUrl: string | null = null;
   private loadId: number = 0;
   private loopCheckInterval: number | null = null;
+  private volume: number = 1;
   private static readonly LOOP_CHECK_INTERVAL_MS = 50;
   private static readonly LOOP_BUFFER_MS = 0.15; // 150ms buffer for mobile compatibility
 
@@ -256,6 +257,17 @@ class AudioEngine {
     if (this.audio) {
       this.audio.playbackRate = speed === 'slow' ? 0.75 : 1.0;
     }
+  }
+
+  setVolume(vol: number): void {
+    this.volume = Math.max(0, Math.min(1, vol));
+    if (this.audio) {
+      this.audio.volume = this.volume;
+    }
+  }
+
+  getVolume(): number {
+    return this.volume;
   }
 
   setLoop(start: number | null, end: number | null): void {

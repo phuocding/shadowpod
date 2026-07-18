@@ -25,7 +25,7 @@ export function SentenceLine({
   return (
     <button
       onClick={onClick}
-      className={`relative w-full text-left px-4 py-3 rounded-xl transition-all ${
+      className={`relative w-full text-left px-4 py-3 rounded-xl transition-all duration-500 ${
         isDimmed
           ? 'opacity-30 pointer-events-none'
           : isSelected
@@ -35,8 +35,8 @@ export function SentenceLine({
           : isEditMode
           ? 'border-2 border-dashed border-[var(--color-border-light)] hover:border-[var(--color-primary)] hover:bg-white/5'
           : isActive
-          ? 'bg-[var(--color-primary)]/20 text-[var(--color-text-base)] scale-[1.02]'
-          : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-silver)] hover:bg-white/5'
+          ? 'scale-[1.02] origin-left'
+          : 'opacity-25 hover:opacity-40'
       } ${isLooping && !isSelected && !isEditMode ? 'ring-2 ring-[var(--color-primary)]' : ''}`}
     >
       {/* Merge target icon */}
@@ -45,8 +45,21 @@ export function SentenceLine({
           <Icon name="add" size={16} className="text-[var(--color-on-primary)]" />
         </div>
       )}
-      <p className={`text-lg leading-relaxed ${isActive || isSelected || isMergeTarget ? 'font-semibold' : ''} ${isSelected || isMergeTarget ? 'text-[var(--color-text-base)]' : ''}`}>
+      <p
+        className={`text-xl leading-[1.3] ${
+          isActive
+            ? 'text-white font-bold'
+            : isSelected || isMergeTarget
+            ? 'text-[var(--color-text-base)] font-semibold'
+            : 'text-[var(--color-text-muted)]'
+        }`}
+        style={isActive ? { textShadow: '0 2px 4px rgba(0,0,0,0.3)' } : undefined}
+      >
         {segment.text}
+        {/* Inline loop icon for active looping segment */}
+        {isActive && isLooping && (
+          <Icon name="loop" size={18} className="text-[var(--color-primary)] ml-2 inline-block align-middle" />
+        )}
       </p>
     </button>
   );

@@ -116,7 +116,7 @@ export function TranscriptPanel({
   return (
     <div
       ref={containerRef}
-      className="flex-1 overflow-y-auto hide-scrollbar px-4 py-6 space-y-2 relative"
+      className="flex-1 overflow-y-auto hide-scrollbar px-4 py-6 pb-32 space-y-2 relative"
       onClick={handleContainerClick}
     >
       {/* Floating Menu */}

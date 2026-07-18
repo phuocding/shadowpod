@@ -304,3 +304,15 @@ body {
 .animate-menu-appear {
   animation: menu-appear 0.15s ease-out forwards;
 }
+
+/* MiniPlayer Micro-interactions */
+@keyframes equalizer {
+  0% { transform: scaleY(0.3); }
+  100% { transform: scaleY(1); }
+}
+
+@keyframes marquee {
+  0% { transform: translate3d(0, 0, 0); }
+  80% { transform: translate3d(-50%, 0, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}

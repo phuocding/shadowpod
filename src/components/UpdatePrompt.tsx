@@ -1,14 +1,17 @@
+import { useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { Icon } from './ui/Icon';
+import { clearAllData } from '../services/storage';
 
 export function UpdatePrompt() {
+  const [isClearing, setIsClearing] = useState(false);
+
   const {
     needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(_swUrl, registration) {
       console.log('[PWA] SW registered:', _swUrl);
-      // Check for updates every 30 seconds when app is open
       if (registration) {
         setInterval(() => {
           console.log('[PWA] Checking for updates...');
@@ -25,6 +28,27 @@ export function UpdatePrompt() {
     updateServiceWorker(true);
   };
 
+  const handleClearAndUpdate = async () => {
+    if (isClearing) return;
+
+    const confirmed = window.confirm(
+      'Xoá tất cả dữ liệu?\n\nThao tác này sẽ xoá toàn bộ audio và transcript đã lưu. Không thể hoàn tác.'
+    );
+
+    if (!confirmed) return;
+
+    setIsClearing(true);
+    try {
+      console.log('[PWA] Clearing all data before update...');
+      await clearAllData();
+      console.log('[PWA] Data cleared, updating...');
+      updateServiceWorker(true);
+    } catch (error) {
+      console.error('[PWA] Failed to clear data:', error);
+      setIsClearing(false);
+    }
+  };
+
   if (!needRefresh) return null;
 
   return (
@@ -36,15 +60,37 @@ export function UpdatePrompt() {
         <h2 className="text-xl font-bold text-[var(--color-text-base)] mb-2">
           Có bản cập nhật mới
         </h2>
-        <p className="text-[var(--color-text-muted)] mb-6">
-          Vui lòng cập nhật để tiếp tục sử dụng ứng dụng
+        <p className="text-[var(--color-text-muted)] mb-6 text-sm">
+          Chọn cách cập nhật phù hợp
         </p>
-        <button
-          onClick={handleUpdate}
-          className="w-full py-4 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-lg transition-transform active:scale-95 shadow-[0_4px_20px_rgba(16,185,129,0.3)]"
-        >
-          Cập nhật ngay
-        </button>
+
+        <div className="space-y-3">
+          <button
+            onClick={handleUpdate}
+            className="w-full py-4 rounded-xl bg-[var(--color-primary)] text-[var(--color-on-primary)] font-bold text-base transition-transform active:scale-95 shadow-[0_4px_20px_rgba(16,185,129,0.3)]"
+          >
+            Cập nhật
+          </button>
+
+          <button
+            onClick={handleClearAndUpdate}
+            disabled={isClearing}
+            className="w-full py-3 rounded-xl bg-red-500/20 text-red-400 font-medium text-sm transition-all active:scale-95 border border-red-500/30 hover:bg-red-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isClearing ? (
+              <span className="flex items-center justify-center gap-2">
+                <Icon name="progress_activity" size={18} className="animate-spin" />
+                Đang xoá...
+              </span>
+            ) : (
+              'Xoá dữ liệu & Cập nhật'
+            )}
+          </button>
+
+          <p className="text-[10px] text-[var(--color-text-muted)]/60 mt-2">
+            Chọn "Xoá dữ liệu" nếu gặp lỗi hiển thị hoặc phát audio
+          </p>
+        </div>
       </div>
     </div>
   );

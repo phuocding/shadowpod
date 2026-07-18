@@ -21,7 +21,7 @@ export function MiniPlayer({ onOpenSheet }: MiniPlayerProps) {
   const progress = currentAudio.duration ? (currentTime / currentAudio.duration) * 100 : 0;
 
   return (
-    <div className="fixed bottom-24 left-4 right-4 z-40">
+    <div className="hidden lg:block fixed bottom-24 left-4 right-4 z-40">
       <div
         onClick={onOpenSheet}
         className="relative overflow-hidden bg-[var(--color-surface-container-low)]/95 backdrop-blur-md border border-[var(--color-primary)]/20 rounded-lg cursor-pointer"

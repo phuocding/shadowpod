@@ -3,6 +3,7 @@ import { Icon } from './ui/Icon';
 import { useToast } from './ui/Toast';
 import { TranscriptPanel } from './Player/TranscriptPanel';
 import { PlaybackControls } from './Player/PlaybackControls';
+import { ImmersiveControls } from './Player/ImmersiveControls';
 import { LoopToggle } from './Player/LoopToggle';
 import { SpeedToggle } from './Player/SpeedToggle';
 import { ModeSwitcher } from './Player/ModeSwitcher';
@@ -31,6 +32,7 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
   const [loopSegmentId, setLoopSegmentId] = useState<number | undefined>();
   const [isClosing, setIsClosing] = useState(false);
   const [isFavorite, setIsFavorite] = useState(currentAudio?.isFavorite ?? false);
+  const [volume, setVolume] = useState(1);
 
   // Edit mode states
   const [isEditMode, setIsEditMode] = useState(false);
@@ -242,6 +244,11 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
     setPlaybackSpeed(speed);
     audioEngine.setSpeed(speed);
   }, [setPlaybackSpeed]);
+
+  const handleVolumeChange = useCallback((vol: number) => {
+    setVolume(vol);
+    audioEngine.setVolume(vol);
+  }, []);
 
   const handleLoopChange = useCallback((mode: LoopMode) => {
     setLoopMode(mode);
@@ -468,25 +475,23 @@ export function PlayerSheet({ isOpen, onClose, onOpenDictation }: PlayerSheetPro
         )}
 
         {/* Controls */}
-        <div className="shrink-0 px-4 pb-6 pt-4 bg-[var(--color-surface-container)]">
-          <div className="flex justify-center gap-4 mb-4">
-            <LoopToggle mode={loopMode} onChange={handleLoopChange} />
-            <SpeedToggle speed={playbackSpeed} onChange={handleSpeedChange} />
-            <button
-              onClick={toggleEditMode}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-sm transition-colors ${isEditMode ? 'bg-[var(--color-primary)] text-[var(--color-on-primary)]' : 'bg-[var(--color-surface-card)] text-[var(--color-text-muted)]'}`}
-            >
-              <Icon name={isEditMode ? 'check' : 'edit'} size={18} />
-            </button>
-          </div>
-          <PlaybackControls
+        <div className="shrink-0 bg-[var(--color-surface-container)]">
+          <ImmersiveControls
             isPlaying={localIsPlaying}
             currentTime={localCurrentTime}
             duration={currentAudio.duration}
+            volume={volume}
+            loopMode={loopMode}
+            playbackSpeed={playbackSpeed}
+            isEditMode={isEditMode}
             onPlayPause={handlePlayPause}
             onSeek={handleSeek}
+            onVolumeChange={handleVolumeChange}
             onPrevSentence={goToPrevSentence}
             onNextSentence={goToNextSentence}
+            onLoopChange={handleLoopChange}
+            onSpeedChange={handleSpeedChange}
+            onEditToggle={toggleEditMode}
           />
         </div>
 

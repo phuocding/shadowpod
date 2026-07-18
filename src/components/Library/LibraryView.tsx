@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { getAllAudio, deleteAudio, toggleFavorite } from '../../services/storage';
 import type { AudioRecord } from '../../types';
 import type { FeaturedAudio } from '../../types/featured';
-import { Icon } from '../ui/Icon';
 import { AudioCard } from './AudioCard';
 import { EmptyState } from './EmptyState';
 import { FeaturedSection } from '../Featured';
 import { WelcomeScreen, UploadPrompt, UploadGuideModal } from '../Onboarding';
 import { SearchView } from '../SearchView';
 import { DesktopSidebar } from '../Layout';
+import { DynamicBubbleBar } from '../DynamicBubbleBar';
 import { useOnboardingStore } from '../../stores/onboardingStore';
 import { usePlayerStore } from '../../stores/playerStore';
 
@@ -130,18 +130,14 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
         onUpload={() => navigate('/upload')}
       />
 
-      {/* Header - Logo + Search (mobile only for logo, search always visible) */}
+      {/* Header - Logo only (mobile), clean minimal */}
       <header className="sticky top-0 z-30 flex justify-between items-center px-4 py-3 bg-gradient-to-b from-[var(--color-background)] to-transparent lg:justify-end">
         <div className="flex items-center gap-2 lg:hidden">
           <img src="/screen.png" alt="ShadowPod" className="w-8 h-8" />
           <span className="text-xl font-bold text-[var(--color-primary)] tracking-tight">ShadowPod</span>
         </div>
-        <button
-          onClick={() => setShowSearchView(true)}
-          className="rounded-full w-10 h-10 flex items-center justify-center transition-all active:scale-95 bg-[var(--color-surface-container)] text-[var(--color-text-base)] hover:bg-[var(--color-surface-container-high)]"
-        >
-          <Icon name="search" />
-        </button>
+        {/* Desktop only - placeholder for alignment */}
+        <div className="hidden lg:block" />
       </header>
 
       {/* Main Content */}
@@ -203,46 +199,14 @@ export function LibraryView({ onOpenSettings, onOpenPlayerSheet }: LibraryViewPr
         }}
       />
 
-      {/* Bottom Nav - Threads Style (mobile only) */}
-      <nav className="lg:hidden fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-md z-50 bg-[var(--color-surface-container-low)]/80 backdrop-blur-xl border border-white/10 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-        <div className="flex justify-around items-center h-16 px-2">
-          {/* Home */}
-          <button
-            onClick={() => setCurrentTab('home')}
-            className={`flex flex-col items-center justify-center p-2 transition-colors ${currentTab === 'home' ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
-          >
-            <Icon name="home" filled={currentTab === 'home'} size={24} />
-          </button>
-          {/* Noti - disabled */}
-          <button
-            disabled
-            className="flex flex-col items-center justify-center p-2 text-[var(--color-text-muted)] opacity-40 cursor-not-allowed"
-          >
-            <Icon name="notifications" size={24} />
-          </button>
-          {/* Add - center, bigger */}
-          <button
-            onClick={() => navigate('/upload')}
-            className="flex items-center justify-center w-12 h-12 -mt-4 bg-[var(--color-primary)] text-[var(--color-on-primary)] rounded-full shadow-lg transition-transform active:scale-95"
-          >
-            <Icon name="add" size={28} />
-          </button>
-          {/* Favorite */}
-          <button
-            onClick={() => setCurrentTab('favorites')}
-            className={`flex flex-col items-center justify-center p-2 transition-colors ${currentTab === 'favorites' ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)]'}`}
-          >
-            <Icon name="favorite" filled={currentTab === 'favorites'} size={24} />
-          </button>
-          {/* Settings */}
-          <button
-            onClick={onOpenSettings}
-            className="flex flex-col items-center justify-center p-2 text-[var(--color-text-muted)] transition-colors"
-          >
-            <Icon name="settings" size={24} />
-          </button>
-        </div>
-      </nav>
+      {/* Dynamic Bubble Bar - Single component with CSS morphing */}
+      <DynamicBubbleBar
+        onOpenSheet={onOpenPlayerSheet}
+        onOpenSearch={() => setShowSearchView(true)}
+        onOpenSettings={onOpenSettings}
+        currentTab={currentTab}
+        onTabChange={setCurrentTab}
+      />
 
       {/* Search View */}
       <SearchView
