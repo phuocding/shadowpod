@@ -59,16 +59,6 @@ export function ImmersiveControls({
     onSeek(getSeekTime(clientX));
   };
 
-  const handleDragMove = useCallback((e: MouseEvent | TouchEvent) => {
-    if (!isDragging) return;
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    onSeek(getSeekTime(clientX));
-  }, [isDragging, getSeekTime, onSeek]);
-
-  const handleDragEnd = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
   // Global event listeners for drag
   useEffect(() => {
     if (!isDragging) return;

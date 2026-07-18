@@ -19,7 +19,6 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
   const [offsetX, setOffsetX] = useState(0);
   const [showMenu, setShowMenu] = useState(false);
   const [menuAnimating, setMenuAnimating] = useState(false);
-  const [menuVisible, setMenuVisible] = useState(false);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const startOffsetX = useRef(0);
@@ -32,14 +31,12 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
   const openMenu = () => {
     setShowMenu(true);
     requestAnimationFrame(() => {
-      setMenuVisible(true);
       setMenuAnimating(true);
     });
   };
 
   const closeMenu = () => {
     setMenuAnimating(false);
-    setMenuVisible(false);
     setTimeout(() => setShowMenu(false), 300);
   };
 
