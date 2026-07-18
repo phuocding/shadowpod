@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { AudioRecord } from '../../types';
 import { Icon } from '../ui/Icon';
 import { formatTime, formatRelativeDate } from '../../utils/formatTime';
@@ -21,6 +21,7 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
   const touchStartY = useRef(0);
   const startOffsetX = useRef(0);
   const isHorizontalSwipe = useRef<boolean | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const isThisAudio = currentAudio?.id === audio.id;
   const isCurrentlyPlaying = isThisAudio && isPlaying;
@@ -32,22 +33,30 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
     isHorizontalSwipe.current = null;
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const deltaX = e.touches[0].clientX - touchStartX.current;
-    const deltaY = e.touches[0].clientY - touchStartY.current;
+  // Use native event listener with { passive: false } to allow preventDefault
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) return;
 
-    if (isHorizontalSwipe.current === null && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
-      isHorizontalSwipe.current = Math.abs(deltaX) > Math.abs(deltaY);
-    }
+    const handleTouchMove = (e: TouchEvent) => {
+      const deltaX = e.touches[0].clientX - touchStartX.current;
+      const deltaY = e.touches[0].clientY - touchStartY.current;
 
-    if (isHorizontalSwipe.current) {
-      e.preventDefault();
-      const newOffset = startOffsetX.current + deltaX;
-      // Clamp: max right is LEFT_ACTION_WIDTH, max left is -RIGHT_ACTION_WIDTH (with rubber band)
-      const clampedOffset = Math.max(-RIGHT_ACTION_WIDTH - 30, Math.min(LEFT_ACTION_WIDTH + 30, newOffset));
-      setOffsetX(clampedOffset);
-    }
-  };
+      if (isHorizontalSwipe.current === null && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
+        isHorizontalSwipe.current = Math.abs(deltaX) > Math.abs(deltaY);
+      }
+
+      if (isHorizontalSwipe.current) {
+        e.preventDefault();
+        const newOffset = startOffsetX.current + deltaX;
+        const clampedOffset = Math.max(-RIGHT_ACTION_WIDTH - 30, Math.min(LEFT_ACTION_WIDTH + 30, newOffset));
+        setOffsetX(clampedOffset);
+      }
+    };
+
+    card.addEventListener('touchmove', handleTouchMove, { passive: false });
+    return () => card.removeEventListener('touchmove', handleTouchMove);
+  }, [offsetX]);
 
   const handleTouchEnd = () => {
     if (isHorizontalSwipe.current === null) return;
@@ -105,13 +114,13 @@ export function AudioCard({ audio, onDelete, onToggleFavorite, onOpenSheet }: Au
 
       {/* Slideable card content */}
       <div
+        ref={cardRef}
         className="relative bg-[var(--color-surface-container-low)] border border-white/5"
         style={{
           transform: `translateX(${offsetX}px)`,
           transition: isHorizontalSwipe.current === null ? 'transform 0.2s ease-out' : 'none'
         }}
         onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onClick={async () => {
           if (isRevealed) resetSwipe();
